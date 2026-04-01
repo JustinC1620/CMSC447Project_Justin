@@ -26,14 +26,12 @@ function schedule_db_query() {
             c.course_subject,
             c.course_code,
             c.course_name,
-            c.course_count,
             sub.subject_code,
             sub.subject_name,
-            sub.subject_count,
             um.meta_value AS first_name
         FROM schedule s
-        JOIN courses c      ON s.course_id      = c.course_id
-        JOIN subjects sub   ON c.course_subject = sub.subject_code
+        JOIN courses c         ON s.course_id      = c.course_id
+        JOIN subjects sub      ON c.course_subject = sub.subject_code
         JOIN wp_users u        ON s.user_id        = u.ID
         JOIN wp_usermeta um    ON u.ID             = um.user_id
                            AND um.meta_key      = 'first_name'
@@ -47,6 +45,33 @@ function schedule_db_query() {
     return $wpdb->get_results($query);
 }
 
+function get_subjects($schedule) {
+    $subjects = [];
+    foreach ($schedule as $row) {
+        if (!isset($subjects[$row->subject_code])) {
+            $subjects[$row->subject_code] = [
+                'subject_code'  => $row->subject_code,
+                'subject_name'  => $row->subject_name,
+            ];
+        }
+    }
+    return array_values($subjects);
+}
+
+function get_courses($schedule) {
+    $courses = [];
+    foreach ($schedule as $row) {
+        if (!isset($courses[$row->course_id])) {
+            $courses[$row->course_id] = [
+                'course_id'      => $row->course_id,
+                'course_code'    => $row->course_code,
+                'course_name'    => $row->course_name,
+                'course_subject' => $row->course_subject,
+            ];
+        }
+    }
+    return array_values($courses);
+}
 
 // Test for schedule_query()
 // Login as WordPress Admin
@@ -57,10 +82,11 @@ add_action('template_redirect', function() {
         return;
     }
 
-    // Clear cache so we always see a fresh DB hit
     wp_cache_delete(SCHEDULE_CACHE_KEY, SCHEDULE_CACHE_GROUP);
 
     $schedule = schedule_query();
+    $subjects = get_subjects($schedule);
+    $courses  = get_courses($schedule);
     ?>
     <!DOCTYPE html>
     <html>
@@ -73,12 +99,13 @@ add_action('template_redirect', function() {
             .meta { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
             .pass { color: green; }
             .fail { color: red; }
+            .section { margin-bottom: 2rem; }
         </style>
     </head>
     <body>
-        <h2>Schedule Query Debug</h2>
 
-        <div class="meta">
+        <h2>Schedule Query Debug</h2>
+        <div class="meta section">
             <p>Row count: <strong><?php echo count($schedule); ?></strong></p>
             <p>Last query:</p>
             <pre><?php global $wpdb; echo esc_html($wpdb->last_query); ?></pre>
@@ -88,16 +115,65 @@ add_action('template_redirect', function() {
         </div>
 
         <h2>Cache Status</h2>
-        <?php
-        $cached = wp_cache_get(SCHEDULE_CACHE_KEY, SCHEDULE_CACHE_GROUP);
-        if (false !== $cached): ?>
-            <p class="pass">✓ Cache populated (<?php echo count($cached); ?> rows)</p>
-        <?php else: ?>
-            <p class="fail">✗ Cache empty after query</p>
-        <?php endif; ?>
+        <div class="section">
+            <?php $cached = wp_cache_get(SCHEDULE_CACHE_KEY, SCHEDULE_CACHE_GROUP); ?>
+            <?php if (false !== $cached): ?>
+                <p class="pass">✓ Cache populated (<?php echo count($cached); ?> rows)</p>
+            <?php else: ?>
+                <p class="fail">✗ Cache empty after query</p>
+            <?php endif; ?>
+        </div>
 
-        <h2>Results</h2>
-        <pre><?php var_dump($schedule); ?></pre>
+        <h2>Subjects</h2>
+        <div class="section">
+            <?php if (!empty($subjects)): ?>
+                <p class="pass">✓ <?php echo count($subjects); ?> subjects extracted</p>
+                <?php
+                // Verify no duplicate subject codes
+                $codes = array_column($subjects, 'subject_code');
+                if (count($codes) === count(array_unique($codes))): ?>
+                    <p class="pass">✓ No duplicate subject codes</p>
+                <?php else: ?>
+                    <p class="fail">✗ Duplicate subject codes found</p>
+                <?php endif; ?>
+                <pre><?php var_dump($subjects); ?></pre>
+            <?php else: ?>
+                <p class="fail">✗ get_subjects() returned empty</p>
+            <?php endif; ?>
+        </div>
+
+        <h2>Courses</h2>
+        <div class="section">
+            <?php if (!empty($courses)): ?>
+                <p class="pass">✓ <?php echo count($courses); ?> courses extracted</p>
+                <?php
+                // Verify no duplicate course ids
+                $ids = array_column($courses, 'course_id');
+                if (count($ids) === count(array_unique($ids))): ?>
+                    <p class="pass">✓ No duplicate course IDs</p>
+                <?php else: ?>
+                    <p class="fail">✗ Duplicate course IDs found</p>
+                <?php endif; ?>
+                <?php
+                // Verify every course subject references a known subject
+                $subject_codes   = array_column($subjects, 'subject_code');
+                $orphaned_courses = array_filter($courses, fn($c) => !in_array($c['course_subject'], $subject_codes));
+                if (empty($orphaned_courses)): ?>
+                    <p class="pass">✓ All courses reference a known subject</p>
+                <?php else: ?>
+                    <p class="fail">✗ <?php echo count($orphaned_courses); ?> course(s) reference an unknown subject</p>
+                <?php endif; ?>
+                <pre><?php var_dump($courses); ?></pre>
+            <?php else: ?>
+                <p class="fail">✗ get_courses() returned empty</p>
+            <?php endif; ?>
+        </div>
+
+        <h2>Full Schedule Results</h2>
+        <div class="section">
+            <pre><?php var_dump($schedule); ?></pre>
+        </div>
+
     </body>
     </html>
     <?php
