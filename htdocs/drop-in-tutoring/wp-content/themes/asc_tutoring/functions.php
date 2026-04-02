@@ -8,21 +8,22 @@ const MANAGEMENT_CACHE_GROUP = "management_group";
 
 
 function user_query() {
-    $uScheduleObj = wp_cache_get(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
+    $uScheduleData = wp_cache_get(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
 
-    if ($uScheduleObj === false) {
+    if ($uScheduleData === false) {
         $uScheduleObj = u_schedule_db_query();
-        wp_cache_set(U_SCHEDULE_CACHE_KEY, $uScheduleObj, USER_CACHE_GROUP, HOUR_IN_SECONDS);
+        $uScheduleData = u_get_schedule_data($uScheduleObj);
+        wp_cache_set(U_SCHEDULE_CACHE_KEY, $uScheduleData, USER_CACHE_GROUP, HOUR_IN_SECONDS);
     }
+    [$uSubjects, $uCourses, $uSchedule] = $uScheduleData;
 
-    $eventsObj = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
-    if ($eventsObj === false) {
+    $eventsData = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+    if ($eventsData === false) {
         $eventsObj = events_db_query();
-        wp_cache_set(EVENTS_CACHE_KEY, $eventsObj, USER_CACHE_GROUP, HOUR_IN_SECONDS);
+        $eventsData = u_get_events_data($eventsObj);
+        wp_cache_set(EVENTS_CACHE_KEY, $eventsData, USER_CACHE_GROUP, HOUR_IN_SECONDS);
     }
-
-    [$uSubjects, $uCourses, $uSchedule] = u_get_schedule_data($uScheduleObj);
-    [$eventTypes, $uEvents]             = u_get_events_data($eventsObj);
+    [$eventTypes, $uEvents] = $eventsData;
 
     return [$uSubjects, $uCourses, $uSchedule, $eventTypes, $uEvents];
 }
@@ -88,6 +89,7 @@ function events_db_query() {
 
 function u_get_schedule_data($uScheduleObj) {
     $uSubjects = []; $uCourses = []; $uSchedule = [];
+    $course_index = [];
     foreach ($uScheduleObj as $row) {
         if (!isset($uSubjects[$row->subject_code])) {
             $uSubjects[$row->subject_code] = [
@@ -96,8 +98,9 @@ function u_get_schedule_data($uScheduleObj) {
             ];
         }
 
-        if (!isset($uCourses[$row->course_id])) {
-            $uCourses[$row->course_id] = [
+        if (!isset($course_index[$row->course_id])) {
+            $course_index[$row->course_id] = true;
+            $uCourses[$row->course_subject][] = [
                 "course_id"      => $row->course_id,
                 "course_code"    => $row->course_code,
                 "course_subject" => $row->course_subject,
@@ -105,7 +108,7 @@ function u_get_schedule_data($uScheduleObj) {
             ];
         }
 
-        $uSchedule[] = [
+        $uSchedule[$row->course_id][] = [
             "user_id"        => $row->user_id,
             "first_name"     => $row->first_name,
             "course_id"      => $row->course_id,  
@@ -114,7 +117,7 @@ function u_get_schedule_data($uScheduleObj) {
             "end_time"       => $row->end_time
         ];
     }
-    return [array_values($uSubjects), array_values($uCourses), $uSchedule];
+    return [array_values($uSubjects), $uCourses, $uSchedule];
 }
 
 
@@ -142,21 +145,22 @@ function u_get_events_data($eventsObj) {
 
 //---------------------------------------------------------------------------------------------------------------------
 function management_query() {
-    $mScheduleObj = wp_cache_get(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+    $mScheduleData = wp_cache_get(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-    if ($mScheduleObj === false) {
+    if ($mScheduleData === false) {
         $mScheduleObj = m_schedule_db_query();
-        wp_cache_set(M_SCHEDULE_CACHE_KEY, $mScheduleObj, MANAGEMENT_CACHE_GROUP, HOUR_IN_SECONDS);
+        $mScheduleData = m_get_schedule_data($mScheduleObj);
+        wp_cache_set(M_SCHEDULE_CACHE_KEY, $mScheduleData, MANAGEMENT_CACHE_GROUP, HOUR_IN_SECONDS);
     }
+    [$mSubjects, $mCourses, $users, $mSchedule] = $mScheduleData;
 
-    $eventsObj = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
-    if ($eventsObj === false) {
+    $eventsData = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+    if ($eventsData === false) {
         $eventsObj = events_db_query();
-        wp_cache_set(EVENTS_CACHE_KEY, $eventsObj, USER_CACHE_GROUP, HOUR_IN_SECONDS);
+        $eventsData = m_get_events_data($eventsObj);
+        wp_cache_set(EVENTS_CACHE_KEY, $eventsData, USER_CACHE_GROUP, HOUR_IN_SECONDS);
     }
-
-    [$mSubjects, $mCourses, $users, $mSchedule] = m_get_schedule_data($mScheduleObj);
-    [$eventTypes, $mEvents]                     = m_get_events_data($eventsObj);
+    [$eventTypes, $mEvents] = $eventsData;
 
     return [$mSubjects, $mCourses, $users, $mSchedule, $eventTypes, $mEvents];
 }
@@ -165,62 +169,64 @@ function management_query() {
 function m_schedule_db_query() {
     global $wpdb;
 
-    $mScheduleObj = $wpdb->get_results("
+    // Subjects
+    $subjects = $wpdb->get_results("
         SELECT
-            s.schedule_id,
-            s.user_id,
-            s.day_of_week,
-            s.start_time,
-            s.end_time,
-            c.course_id,
-            c.course_subject,
-            c.course_code,
-            c.course_name,
-            c.course_count,
-            sub.subject_code,
-            sub.subject_name,
-            sub.subject_count,
-            u.user_login,
-            u.user_email,
-            MAX(CASE WHEN um.meta_key = 'first_name'    THEN um.meta_value END) AS first_name,
-            MAX(CASE WHEN um.meta_key = 'last_name'     THEN um.meta_value END) AS last_name,
-            MAX(CASE WHEN um.meta_key = 'wp_capabilities' THEN um.meta_value END) AS capabilities
-        FROM schedule s
-        JOIN courses c      ON s.course_id      = c.course_id
-        JOIN subjects sub   ON c.course_subject = sub.subject_code
-        JOIN wp_users u        ON s.user_id     = u.ID
-        JOIN wp_usermeta um    ON u.ID          = um.user_id
-                          AND um.meta_key      IN ('first_name', 'last_name', 'wp_capabilities')
-        GROUP BY
-            s.schedule_id,
-            s.user_id,
-            s.day_of_week,
-            s.start_time,
-            s.end_time,
-            c.course_id,
-            c.course_subject,
-            c.course_code,
-            c.course_name,
-            c.course_count,
-            sub.subject_code,
-            sub.subject_name,
-            sub.subject_count,
-            u.user_login,
-            u.user_email
-        ORDER BY
-            sub.subject_code,
-            c.course_code,
-            s.day_of_week,
-            s.start_time
+            subject_code,
+            subject_name,
+            subject_count
+        FROM subjects
     ");
 
-    return $mScheduleObj;
+    $courses = $wpdb->get_results("
+        SELECT
+            course_id,
+            course_subject,
+            course_code,
+            course_name,
+            course_count
+        FROM courses
+    ");
+
+    $users = $wpdb->get_results("
+        SELECT
+            u.ID as user_id,
+            u.user_login,
+            u.user_email,
+            MAX(CASE WHEN um.meta_key = 'first_name' THEN um.meta_value END) AS first_name,
+            MAX(CASE WHEN um.meta_key = 'last_name' THEN um.meta_value END) AS last_name,
+            MAX(CASE WHEN um.meta_key = 'wp_capabilities' THEN um.meta_value END) AS capabilities
+        FROM {$wpdb->users} u
+        LEFT JOIN {$wpdb->usermeta} um
+            ON u.ID = um.user_id
+           AND um.meta_key IN ('first_name','last_name','wp_capabilities')
+        GROUP BY u.ID, u.user_login, u.user_email
+    ");
+
+    $schedule = $wpdb->get_results("
+        SELECT
+            schedule_id,
+            user_id,
+            course_id,
+            day_of_week,
+            start_time,
+            end_time
+        FROM schedule
+    ");
+
+    return [
+        'subjects' => $subjects,
+        'courses'  => $courses,
+        'users'    => $users,
+        'schedule' => $schedule
+    ];
 }
 
 
 function m_get_schedule_data($mScheduleObj) {
     $mSubjects = []; $mCourses = []; $users = []; $mSchedule = [];
-    foreach ($mScheduleObj as $row) {
+
+    foreach ($mScheduleObj['subjects'] as $row) {
         if (!isset($mSubjects[$row->subject_code])) {
             $mSubjects[$row->subject_code] = [
                 'subject_code'  => $row->subject_code,
@@ -228,7 +234,9 @@ function m_get_schedule_data($mScheduleObj) {
                 'subject_count' => $row->subject_count
             ];
         }
+    }
 
+    foreach ($mScheduleObj['courses'] as $row) {
         if (!isset($mCourses[$row->course_id])) {
             $mCourses[$row->course_id] = [
                 'course_id'      => $row->course_id,
@@ -238,28 +246,47 @@ function m_get_schedule_data($mScheduleObj) {
                 'course_count'   => $row->course_count
             ];
         }
+    }
 
+    foreach ($mScheduleObj['users'] as $row) {
         if (!isset($users[$row->user_id])) {
+
+            $roles = null;
+            if (!empty($row->capabilities)) {
+                $caps = maybe_unserialize($row->capabilities);
+                if (is_array($caps)) {
+                    $roles = array_key_first($caps);
+                }
+            }
+
             $users[$row->user_id] = [
                 'user_id'    => $row->user_id,
                 'user_login' => $row->user_login,
                 'user_email' => $row->user_email,
                 'first_name' => $row->first_name,
                 'last_name'  => $row->last_name,
-                'roles'      => array_key_first(unserialize($row->capabilities))
+                'roles'      => $roles
             ];
         }
+    }
 
+    foreach ($mScheduleObj['schedule'] as $row) {
         $mSchedule[] = [
-            "schedule_id"    => $row->schedule_id,
-            "user_id"        => $row->user_id,
-            "course_id"      => $row->course_id,  
-            "day_of_week"    => $row->day_of_week,
-            "start_time"     => $row->start_time,
-            "end_time"       => $row->end_time
+            "schedule_id" => $row->schedule_id,
+            "user_id"     => $row->user_id,
+            "course_id"   => $row->course_id,
+            "day_of_week" => $row->day_of_week,
+            "start_time"  => $row->start_time,
+            "end_time"    => $row->end_time
         ];
     }
-    return [array_values($mSubjects), array_values($mCourses), array_values($users), $mSchedule];
+
+    return [
+        array_values($mSubjects),
+        array_values($mCourses),
+        array_values($users),
+        $mSchedule
+    ];
 }
 
 
@@ -285,358 +312,642 @@ function m_get_events_data($eventsObj) {
     return [array_values($eventTypes), $mEvents];
 }
 
+
 //---------------------------------------------------------------------------------------------------------------------
-// Test for user_query()
-// Login as WordPress Admin
-// Navigate to localhost/drop-in-tutoring/?test_schedule=1
-add_action('template_redirect', function() {
-    if (!isset($_GET['test_user']) || !current_user_can('administrator')) {
-        return;
-    }
+add_action('wp_enqueue_scripts', function() {
+    wp_enqueue_script(
+        'scripts',
+        get_template_directory_uri() . '/js/scripts.js',
+        [], // no dependencies
+        '1.0',
+        true // load in footer
+    );
 
-    wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
-    wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
-
-    [$uSubjects, $uCourses, $uSchedule, $eventTypes, $uEvents] = user_query();
-    ?>
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Schedule Debug</title>
-        <style>
-            body     { font-family: monospace; padding: 2rem; background: #f1f1f1; }
-            h2       { color: #333; }
-            pre      { background: #fff; padding: 1rem; border: 1px solid #ddd; overflow-x: auto; }
-            .meta    { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
-            .pass    { color: green; }
-            .fail    { color: red; }
-            .empty   { color: orange; }
-            .section { margin-bottom: 2rem; }
-        </style>
-    </head>
-    <body>
-
-        <h2>DB Queries</h2>
-        <div class="meta section">
-            <p>Last query:</p>
-            <pre><?php global $wpdb; echo esc_html($wpdb->last_query); ?></pre>
-            <?php if ($wpdb->last_error): ?>
-                <p class="fail">DB Error: <?php echo esc_html($wpdb->last_error); ?></p>
-            <?php else: ?>
-                <p class="pass">✓ No DB errors</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Cache Status</h2>
-        <div class="section">
-            <?php $cachedSchedule = wp_cache_get(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP); ?>
-            <?php if (false !== $cachedSchedule): ?>
-                <p class="pass">✓ Schedule cache populated (<?php echo count($cachedSchedule); ?> raw rows)</p>
-            <?php else: ?>
-                <p class="fail">✗ Schedule cache empty after query</p>
-            <?php endif; ?>
-
-            <?php $cachedEvents = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP); ?>
-            <?php if (false !== $cachedEvents): ?>
-                <p class="pass">✓ Events cache populated (<?php echo count($cachedEvents); ?> raw rows)</p>
-            <?php else: ?>
-                <p class="fail">✗ Events cache empty after query</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Subjects</h2>
-        <div class="section">
-            <?php if (!empty($uSubjects)): ?>
-                <p class="pass">✓ <?php echo count($uSubjects); ?> subjects extracted</p>
-                <?php
-                $codes = array_column($uSubjects, 'subject_code');
-                if (count($codes) === count(array_unique($codes))): ?>
-                    <p class="pass">✓ No duplicate subject codes</p>
-                <?php else: ?>
-                    <p class="fail">✗ Duplicate subject codes found</p>
-                <?php endif; ?>
-                <pre><?php var_dump($uSubjects); ?></pre>
-            <?php else: ?>
-                <p class="fail">✗ u_get_schedule_data() returned no subjects</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Courses</h2>
-        <div class="section">
-            <?php if (!empty($uCourses)): ?>
-                <p class="pass">✓ <?php echo count($uCourses); ?> courses extracted</p>
-                <?php
-                $ids = array_column($uCourses, 'course_id');
-                if (count($ids) === count(array_unique($ids))): ?>
-                    <p class="pass">✓ No duplicate course IDs</p>
-                <?php else: ?>
-                    <p class="fail">✗ Duplicate course IDs found</p>
-                <?php endif; ?>
-                <?php
-                $subjectCodes    = array_column($uSubjects, 'subject_code');
-                $orphanedCourses = array_filter($uCourses, fn($c) => !in_array($c['course_subject'], $subjectCodes));
-                if (empty($orphanedCourses)): ?>
-                    <p class="pass">✓ All courses reference a known subject</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($orphanedCourses); ?> course(s) reference an unknown subject</p>
-                <?php endif; ?>
-                <pre><?php var_dump($uCourses); ?></pre>
-            <?php else: ?>
-                <p class="fail">✗ u_get_schedule_data() returned no courses</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Schedule</h2>
-        <div class="section">
-            <?php if (!empty($uSchedule)): ?>
-                <p class="pass">✓ <?php echo count($uSchedule); ?> schedule rows</p>
-                <?php
-                $courseIds     = array_column($uCourses, 'course_id');
-                $orphanedRows  = array_filter($uSchedule, fn($r) => !in_array($r['course_id'], $courseIds));
-                if (empty($orphanedRows)): ?>
-                    <p class="pass">✓ All schedule rows reference a known course</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($orphanedRows); ?> schedule row(s) reference an unknown course</p>
-                <?php endif; ?>
-                <?php
-                $missingNames = array_filter($uSchedule, fn($r) => empty($r['first_name']));
-                if (empty($missingNames)): ?>
-                    <p class="pass">✓ All schedule rows have a first name</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($missingNames); ?> schedule row(s) missing a first name</p>
-                <?php endif; ?>
-                <pre><?php var_dump($uSchedule); ?></pre>
-            <?php else: ?>
-                <p class="fail">✗ u_get_schedule_data() returned no schedule rows</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Event Types</h2>
-        <div class="section">
-            <?php if (!empty($eventTypes)): ?>
-                <p class="pass">✓ <?php echo count($eventTypes); ?> event types extracted</p>
-                <?php
-                $typeIds = array_column($eventTypes, 'event_type_id');
-                if (count($typeIds) === count(array_unique($typeIds))): ?>
-                    <p class="pass">✓ No duplicate event type IDs</p>
-                <?php else: ?>
-                    <p class="fail">✗ Duplicate event type IDs found</p>
-                <?php endif; ?>
-                <pre><?php var_dump($eventTypes); ?></pre>
-            <?php else: ?>
-                <p class="empty">⚠ Event types table is empty</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Events</h2>
-        <div class="section">
-            <?php if (!empty($uEvents)): ?>
-                <p class="pass">✓ <?php echo count($uEvents); ?> events extracted</p>
-                <?php
-                $typeIds        = array_column($eventTypes, 'event_type_id');
-                $orphanedEvents = array_filter($uEvents, fn($e) => !in_array($e['event_type_id'], $typeIds));
-                if (empty($orphanedEvents)): ?>
-                    <p class="pass">✓ All events reference a known event type</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($orphanedEvents); ?> event(s) reference an unknown event type</p>
-                <?php endif; ?>
-                <pre><?php var_dump($uEvents); ?></pre>
-            <?php else: ?>
-                <p class="empty">⚠ Events table is empty</p>
-            <?php endif; ?>
-        </div>
-
-    </body>
-    </html>
-    <?php
-    exit;
+    wp_localize_script('sights-script', 'wpApiSettings', [
+        'nonce' => wp_create_nonce('wp_rest'),
+        'root'  => esc_url_raw(rest_url()),
+    ]);
 });
 
 
-// Test for management_query()
-// Login as WordPress Admin
-// Navigate to localhost/drop-in-tutoring/?test_management=1
+// Schedule REST API
+add_action('rest_api_init', function() {
+    register_rest_route('asc-tutoring/v1', '/schedule', [
+        'methods'             => 'POST',
+        'callback'            => 'create_schedule',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'course_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'day_of_week' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_day_field',
+            ],
+            'start_time' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_time_field',
+            ],
+            'end_time' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_time_field',
+            ],
+        ],
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/schedule/(?P<schedule_id>\d+)', [
+        'methods'             => 'DELETE',
+        'callback'            => 'delete_schedule',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'schedule_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+        ],
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/schedule/(?P<schedule_id>\d+)', [
+    'methods'             => 'PATCH',
+    'callback'            => 'update_schedule',
+    'permission_callback' => function() {
+        return current_user_can('admin_control');
+    },
+    'args' => [
+        'schedule_id' => [
+            'required'          => true,
+            'validate_callback' => 'is_numeric',
+            'sanitize_callback' => 'absint',
+        ],
+        'user_id' => [
+            'required'          => true,
+            'validate_callback' => 'is_numeric',
+            'sanitize_callback' => 'absint',
+        ],
+        'course_id' => [
+            'required'          => true,
+            'validate_callback' => 'is_numeric',
+            'sanitize_callback' => 'absint',
+        ],
+        'day_of_week' => [
+            'required'          => true,
+            'sanitize_callback' => 'sanitize_day_field',
+        ],
+        'start_time' => [
+            'required'          => true,
+            'sanitize_callback' => 'sanitize_time_field',
+        ],
+        'end_time' => [
+            'required'          => true,
+            'sanitize_callback' => 'sanitize_time_field',
+        ],
+    ],
+]);
+});
+
+
+// Events REST API
+add_action('rest_api_init', function() {
+    register_rest_route('asc-tutoring/v1', '/events', [
+        'methods'             => 'POST',
+        'callback'            => 'create_event',
+        'permission_callback' => function() {
+            return current_user_can('staff_control');
+        },
+        'args' => [
+            'event_type' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'start_day' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_date_field',
+            ],
+            'final_day' => [
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_date_field',
+                'defualt'           => 'null'
+            ],
+            'duration' => [
+                'required'          => false,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint',
+                'defualt'           => 'null'
+            ],
+        ],
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/events/(?P<event_id>\d+)', [
+        'methods'             => 'DELETE',
+        'callback'            => 'delete_event',
+        'permission_callback' => function() {
+            return current_user_can('staff_control');
+        },
+        'args' => [
+            'event_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+        ],
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/events/(?P<event_id>\d+)', [
+        'methods'             => 'PATCH',
+        'callback'            => 'update_event',
+        'permission_callback' => function() {
+            return current_user_can('staff_control');
+    },
+        'args' => [
+            'event_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint',
+            ],
+            'event_type' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'start_day' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_date_field',
+            ],
+            'final_day' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_date_field',
+            ],
+            'duration' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+        ],
+    ]);
+});
+
+
+// Users REST API
+add_action('rest_api_init', function() {
+    register_rest_route('asc-tutoring/v1', '/users', [
+        'methods'             => 'POST',
+        'callback'            => 'create_user',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'user_login' => [
+                'required'          => true,
+                'validate_callback' => 'is_umbc_id',
+            ],
+            'user_email' => [
+                'required'          => true,
+                'validate_callback' => 'is_email',
+            ],
+            'first_name' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'last_name' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'role' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field'
+            ],
+        ],
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/users/(?P<user_id>\d+)', [
+        'methods'             => 'DELETE',
+        'callback'            => 'delete_user',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+        ],
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/users/(?P<user_id>\d+)', [
+        'methods'             => 'PATCH',
+        'callback'            => 'update_user',
+        'permission_callback' => function() {
+            return current_user_can('staff_control');
+    },
+        'args' => [
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'role' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field'
+            ]
+        ],
+    ]);
+});
+
+
+function sanitize_time_field($timeStr) {
+    if (strtolower($timeStr) === 'noon') {
+        return '12:00:00';
+    }
+
+    $time = DateTime::createFromFormat('g:i a', str_replace('.', '', strtolower($timeStr)));
+
+    if ($time === false) {
+        return false;
+    }
+
+    return $time->format('H:i:s');
+}
+
+
+function sanitize_day_field($day) {
+    $days = [
+        'Monday'    => 'MON',
+        'Tuesday'   => 'TUE',
+        'Wednesday' => 'WED',
+        'Thursday'  => 'THU',
+        'Friday'    => 'FRI',
+    ];
+
+    $day = ucfirst(strtolower($day));
+
+    return $days[$day] ?? false;
+}
+
+
+function sanitize_date_field($date) {
+    if ($date == "null") {
+        return null;
+    }
+    $date = DateTime::createFromFormat('Y-m-d', $date);
+
+    if ($date === false) {
+        return false;
+    }
+    return $date->format('Y-m-d');
+}
+
+
+function is_umbc_id($id) {
+    if (!preg_match('/^[A-Z]{2}\d{5}$/', $id)) {
+        return new WP_Error(
+            'invalid_id',
+            "$id must be two uppercase letters followed by five digits (e.g. AB12345)",
+            ['status' => 400]
+        );
+    }
+    return true;
+}
+
+
+function create_schedule(WP_REST_Request $request) {
+    global $wpdb;
+    $user_id = $request->get_param('user_id');
+    $course_id = $request->get_param('course_id');
+    $day_of_week = $request->get_param('day_of_week');
+    $start_time = $request->get_param('start_time');
+    $end_time = $request->get_param('end_time');
+
+    if ($day_of_week === false) {
+        return new WP_Error('invalid_day', 'Invalid day of week', ['status' => 400]);
+    }
+
+    if ($start_time === false) {
+        return new WP_Error('invalid_start_time', 'Invalid start time format', ['status' => 400]);
+    }
+
+    if ($end_time === false) {
+        return new WP_Error('invalid_end_time', 'Invalid end time format', ['status' => 400]);
+    }
+
+    $result = $wpdb->insert(
+        'schedule',
+        [
+            'user_id' => $user_id,
+            'course_id' => $course_id,
+            'day_of_week' => $day_of_week,
+            'start_time' => $start_time,
+            'end_time' => $end_time
+        ],
+        ['%d', '%d', '%s', '%s', '%s']
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+    }
+
+    wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
+    wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+
+    return rest_ensure_response(['created' => true, 'schedule_id' => $wpdb->insert_id]);
+}
+
+
+function delete_schedule(WP_REST_Request $request) {
+    global $wpdb;
+    $schedule_id = $request->get_param('schedule_id');
+    
+    $result = $wpdb->delete(
+        'schedule',
+        ['schedule_id' => $schedule_id],
+        ['%d']
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', 'Failed to delete schedule', ['status' => 500]);
+    }
+
+    if ($result === 0) {
+        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+    }
+    
+    wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
+    wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+
+    return rest_ensure_response(['deleted' => true, 'schedule_id' => $schedule_id]);
+}
+
+
+function update_schedule(WP_REST_Request $request) {
+    global $wpdb;
+    $schedule_id = $request->get_param('schedule_id');
+    $user_id     = $request->get_param('user_id');
+    $course_id   = $request->get_param('course_id');
+    $day_of_week = $request->get_param('day_of_week');
+    $start_time  = $request->get_param('start_time');
+    $end_time    = $request->get_param('end_time');
+
+    if ($day_of_week === false) {
+        return new WP_Error('invalid_day', 'Invalid day of week', ['status' => 400]);
+    }
+
+    if ($start_time === false) {
+        return new WP_Error('invalid_start_time', 'Invalid start time format', ['status' => 400]);
+    }
+
+    if ($end_time === false) {
+        return new WP_Error('invalid_end_time', 'Invalid end time format', ['status' => 400]);
+    }
+
+    $result = $wpdb->update(
+        'schedule',
+        [
+            'user_id'     => $user_id,
+            'course_id'   => $course_id,
+            'day_of_week' => $day_of_week,
+            'start_time'  => $start_time,
+            'end_time'    => $end_time,
+        ],
+        ['schedule_id' => $schedule_id],
+        ['%d', '%d', '%s', '%s', '%s'],
+        ['%d']
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+    }
+
+    if ($result === 0) {
+        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+    }
+
+    wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
+    wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+
+    return rest_ensure_response(['updated' => true, 'schedule_id' => $schedule_id]);
+}
+
+
+function create_event(WP_REST_Request $request) {
+    global $wpdb;
+    $event_type = $request->get_param('event_type');
+    $user_id = $request->get_param('user_id');
+    $start_day = $request->get_param('start_day');
+    $final_day = $request->get_param('final_day');
+    $duration = $request->get_param('$duration');
+
+    if ($start_day === false || $start_day === null) {
+        return new WP_Error('invalid_start_day', 'Invalid start day', ['status' => 400]);
+    }
+
+    if ($final_day === false) {
+        return new WP_Error('invalid_final_day', 'Invalid final day', ['status' => 400]);
+    }
+
+    if ($duration == "null") {
+        $duration = null;
+    }
+
+    $result = $wpdb->insert(
+        'events',
+        [
+            '$event_type' => $event_type,
+            'user_id'     => $user_id,
+            'start_day'   => $start_day,
+            'final_day' => $final_day,
+            'duration'  => $duration
+        ],
+        ['%d', '%d', '%s', '%s', '%d']
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+    }
+
+    wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+
+    return rest_ensure_response(['created' => true, 'event_id' => $wpdb->insert_id]);
+}
+
+
+function delete_event(WP_REST_Request $request) {
+    global $wpdb;
+    $event_id = $request->get_param('event_id');
+    
+    $result = $wpdb->delete(
+        'events',
+        ['event_id' => $event_id],
+        ['%d']
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', 'Failed to delete event', ['status' => 500]);
+    }
+
+    if ($result === 0) {
+        return new WP_Error('not_found', 'No event found with that ID', ['status' => 404]);
+    }
+    
+    wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+
+    return rest_ensure_response(['deleted' => true, 'event_id' => $schedule_id]);
+}
+
+
+function update_event(WP_REST_Request $request) {
+    global $wpdb;
+    $event_id = $request->get_param('event_id');
+    $event_type = $request->get_param('event_type');
+    $user_id = $request->get_param('user_id');
+    $start_day = $request->get_param('start_day');
+    $final_day = $request->get_param('final_day');
+    $duration = $request->get_param('$duration');
+
+    if ($start_day === false || $start_day === null) {
+        return new WP_Error('invalid_start_day', 'Invalid start day', ['status' => 400]);
+    }
+
+    if ($final_day === false) {
+        return new WP_Error('invalid_final_day', 'Invalid final day', ['status' => 400]);
+    }
+
+    if ($duration == "null") {
+        $duration = null;
+    }
+
+    $result = $wpdb->update(
+        'events',
+        [
+            '$event_type' => $event_type,
+            'user_id'     => $user_id,
+            'start_day'   => $start_day,
+            'final_day' => $final_day,
+            'duration'  => $duration
+        ],
+        ['event_id' => $event_id],
+        ['%d', '%d', '%s', '%s', '%s'],
+        ['%d']
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+    }
+
+    if ($result === 0) {
+        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+    }
+
+    wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+
+    return rest_ensure_response(['updated' => true, 'event_id' => $event_id]);
+}
+
+
 add_action('template_redirect', function() {
-    if (!isset($_GET['test_management']) || !current_user_can('administrator')) {
+    if (!isset($_GET['test']) || !current_user_can('administrator')) {
         return;
     }
 
-    wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
-    wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+        wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+        wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
 
-    [$mSubjects, $mCourses, $users, $mSchedule, $eventTypes, $mEvents] = management_query();
+    $start = microtime(true);
+    $cache_hit_schedule = wp_cache_get(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP) !== false;
+    $cache_hit_events   = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP) !== false;
+
+    [$mSubjects, $mCourses, $users, $mSchedule, $eventTypes, $uEvents] = management_query();
+
+    $elapsed = round((microtime(true) - $start) * 1000, 2);
+
     ?>
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Management Debug</title>
+        <title>Management Query Test</title>
         <style>
-            body     { font-family: monospace; padding: 2rem; background: #f1f1f1; }
-            h2       { color: #333; }
-            pre      { background: #fff; padding: 1rem; border: 1px solid #ddd; overflow-x: auto; }
-            .meta    { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
-            .pass    { color: green; }
-            .fail    { color: red; }
-            .empty   { color: orange; }
-            .section { margin-bottom: 2rem; }
+            body { font-family: sans-serif; padding: 24px; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
+            th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+            th { background: #f0f0f0; }
+            tr:nth-child(even) { background: #fafafa; }
+            .meta { color: #555; font-size: 14px; margin-bottom: 16px; }
+            h2 { margin-top: 32px; }
         </style>
     </head>
     <body>
+        <h1>Management Query Test</h1>
 
-        <h2>DB Queries</h2>
-        <div class="meta section">
-            <p>Last query:</p>
-            <pre><?php global $wpdb; echo esc_html($wpdb->last_query); ?></pre>
-            <?php if ($wpdb->last_error): ?>
-                <p class="fail">DB Error: <?php echo esc_html($wpdb->last_error); ?></p>
-            <?php else: ?>
-                <p class="pass">✓ No DB errors</p>
-            <?php endif; ?>
-        </div>
+        <form method="post">
+            <button type="submit" name="flush_cache">Flush Cache &amp; Re-run</button>
+        </form>
 
-        <h2>Cache Status</h2>
-        <div class="section">
-            <?php $cachedSchedule = wp_cache_get(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP); ?>
-            <?php if (false !== $cachedSchedule): ?>
-                <p class="pass">✓ Schedule cache populated (<?php echo count($cachedSchedule); ?> raw rows)</p>
-            <?php else: ?>
-                <p class="fail">✗ Schedule cache empty after query</p>
-            <?php endif; ?>
+        <p class="meta" style="margin-top:12px">
+            <strong>Query time:</strong> <?= $elapsed ?>ms &nbsp;|&nbsp;
+            <strong>Schedule cache:</strong> <?= $cache_hit_schedule ? '✅ HIT' : '❌ MISS' ?> &nbsp;|&nbsp;
+            <strong>Events cache:</strong> <?= $cache_hit_events ? '✅ HIT' : '❌ MISS' ?>
+        </p>
 
-            <?php $cachedEvents = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP); ?>
-            <?php if (false !== $cachedEvents): ?>
-                <p class="pass">✓ Events cache populated (<?php echo count($cachedEvents); ?> raw rows)</p>
-            <?php else: ?>
-                <p class="fail">✗ Events cache empty after query</p>
-            <?php endif; ?>
-        </div>
+        <hr>
 
-        <h2>Subjects</h2>
-        <div class="section">
-            <?php if (!empty($mSubjects)): ?>
-                <p class="pass">✓ <?php echo count($mSubjects); ?> subjects extracted</p>
-                <?php
-                $codes = array_column($mSubjects, 'subject_code');
-                if (count($codes) === count(array_unique($codes))): ?>
-                    <p class="pass">✓ No duplicate subject codes</p>
-                <?php else: ?>
-                    <p class="fail">✗ Duplicate subject codes found</p>
-                <?php endif; ?>
-                <pre><?php var_dump($mSubjects); ?></pre>
-            <?php else: ?>
-                <p class="fail">✗ m_get_schedule_data() returned no subjects</p>
-            <?php endif; ?>
-        </div>
+        <?php
+        $sections = [
+            'Subjects'    => $mSubjects,
+            'Courses'     => $mCourses,
+            'Users'       => $users,
+            'Schedule'    => $mSchedule,
+            'Event Types' => $eventTypes,
+            'Events'      => $uEvents,
+        ];
 
-        <h2>Courses</h2>
-        <div class="section">
-            <?php if (!empty($mCourses)): ?>
-                <p class="pass">✓ <?php echo count($mCourses); ?> courses extracted</p>
-                <?php
-                $ids = array_column($mCourses, 'course_id');
-                if (count($ids) === count(array_unique($ids))): ?>
-                    <p class="pass">✓ No duplicate course IDs</p>
-                <?php else: ?>
-                    <p class="fail">✗ Duplicate course IDs found</p>
-                <?php endif; ?>
-                <?php
-                $subjectCodes    = array_column($mSubjects, 'subject_code');
-                $orphanedCourses = array_filter($mCourses, fn($c) => !in_array($c['course_subject'], $subjectCodes));
-                if (empty($orphanedCourses)): ?>
-                    <p class="pass">✓ All courses reference a known subject</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($orphanedCourses); ?> course(s) reference an unknown subject</p>
-                <?php endif; ?>
-                <pre><?php var_dump($mCourses); ?></pre>
-            <?php else: ?>
-                <p class="fail">✗ m_get_schedule_data() returned no courses</p>
-            <?php endif; ?>
-        </div>
+        foreach ($sections as $label => $data): ?>
+            <h2><?= esc_html($label) ?> <span style="font-weight:normal;font-size:14px">(<?= count($data) ?> rows)</span></h2>
 
-        <h2>Users</h2>
-        <div class="section">
-            <?php if (!empty($users)): ?>
-                <p class="pass">✓ <?php echo count($users); ?> users extracted</p>
-                <?php
-                $userIds = array_column($users, 'user_id');
-                if (count($userIds) === count(array_unique($userIds))): ?>
-                    <p class="pass">✓ No duplicate user IDs</p>
-                <?php else: ?>
-                    <p class="fail">✗ Duplicate user IDs found</p>
-                <?php endif; ?>
-                <?php
-                $missingRoles = array_filter($users, fn($u) => empty($u['roles']));
-                if (empty($missingRoles)): ?>
-                    <p class="pass">✓ All users have a role</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($missingRoles); ?> user(s) missing a role</p>
-                <?php endif; ?>
-                <pre><?php var_dump($users); ?></pre>
+            <?php if (empty($data)): ?>
+                <p><em>No data returned.</em></p>
             <?php else: ?>
-                <p class="fail">✗ m_get_schedule_data() returned no users</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <?php foreach (array_keys($data[0]) as $col): ?>
+                                <th><?= esc_html($col) ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($data as $row): ?>
+                            <tr>
+                                <?php foreach ($row as $val): ?>
+                                    <td><?= esc_html($val ?? 'NULL') ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             <?php endif; ?>
-        </div>
-
-        <h2>Schedule</h2>
-        <div class="section">
-            <?php if (!empty($mSchedule)): ?>
-                <p class="pass">✓ <?php echo count($mSchedule); ?> schedule rows</p>
-                <?php
-                $courseIds    = array_column($mCourses, 'course_id');
-                $orphanedRows = array_filter($mSchedule, fn($r) => !in_array($r['course_id'], $courseIds));
-                if (empty($orphanedRows)): ?>
-                    <p class="pass">✓ All schedule rows reference a known course</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($orphanedRows); ?> schedule row(s) reference an unknown course</p>
-                <?php endif; ?>
-                <?php
-                $userIds      = array_column($users, 'user_id');
-                $orphanedRows = array_filter($mSchedule, fn($r) => !in_array($r['user_id'], $userIds));
-                if (empty($orphanedRows)): ?>
-                    <p class="pass">✓ All schedule rows reference a known user</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($orphanedRows); ?> schedule row(s) reference an unknown user</p>
-                <?php endif; ?>
-                <pre><?php var_dump($mSchedule); ?></pre>
-            <?php else: ?>
-                <p class="fail">✗ m_get_schedule_data() returned no schedule rows</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Event Types</h2>
-        <div class="section">
-            <?php if (!empty($eventTypes)): ?>
-                <p class="pass">✓ <?php echo count($eventTypes); ?> event types extracted</p>
-                <?php
-                $typeIds = array_column($eventTypes, 'event_type_id');
-                if (count($typeIds) === count(array_unique($typeIds))): ?>
-                    <p class="pass">✓ No duplicate event type IDs</p>
-                <?php else: ?>
-                    <p class="fail">✗ Duplicate event type IDs found</p>
-                <?php endif; ?>
-                <pre><?php var_dump($eventTypes); ?></pre>
-            <?php else: ?>
-                <p class="empty">⚠ Event types table is empty</p>
-            <?php endif; ?>
-        </div>
-
-        <h2>Events</h2>
-        <div class="section">
-            <?php if (!empty($mEvents)): ?>
-                <p class="pass">✓ <?php echo count($mEvents); ?> events extracted</p>
-                <?php
-                $typeIds        = array_column($eventTypes, 'event_type_id');
-                $orphanedEvents = array_filter($mEvents, fn($e) => !in_array($e['event_type_id'], $typeIds));
-                if (empty($orphanedEvents)): ?>
-                    <p class="pass">✓ All events reference a known event type</p>
-                <?php else: ?>
-                    <p class="fail">✗ <?php echo count($orphanedEvents); ?> event(s) reference an unknown event type</p>
-                <?php endif; ?>
-                <pre><?php var_dump($mEvents); ?></pre>
-            <?php else: ?>
-                <p class="empty">⚠ Events table is empty</p>
-            <?php endif; ?>
-        </div>
+        <?php endforeach; ?>
 
     </body>
     </html>

@@ -2,7 +2,7 @@
 require_once(__DIR__ . "/drop-in-tutoring/wp-load.php");
 require_once(__DIR__ . "/drop-in-tutoring/wp-admin/includes/user.php");
 
-const TABLES = ["subjects", "courses", "wp_users", "schedule"];
+const TABLES = ["subjects", "courses", "wp_users", "schedule", "event_types", "events"];
 const COURSE_ID_BASE = 10000;
 
 $ascPdo = db_connect_root("asc_website_db");
@@ -16,6 +16,7 @@ $stage = 0;
 $courseId = COURSE_ID_BASE;
 $courses = [];
 $users = [];
+$eventTypes = [];
 
 role_setup();
 drop_tables($umbcPdo, $ascPdo);
@@ -25,9 +26,6 @@ while (($row = fgetcsv($file)) !== false) {
         $stage++;
         $headers = fgetcsv($file);
         $row = fgetcsv($file);
-    }
-    else if (count($row) == 1) {
-        die("Error Reading File: " . print_r($row, true));
     }
 
     if (($data = array_combine($headers, $row)) == false) {
@@ -46,11 +44,19 @@ while (($row = fgetcsv($file)) !== false) {
         case 3:
             populate_users($data, $umbcPdo, $ascPdo, $users);
             break;
+
         case 4:
             populate_schedule($data, $umbcPdo, $ascPdo, $courses, $users);
             break;
-    }
 
+        case 5:
+            populate_event_types($data, $ascPdo, $eventTypes);
+            break;
+
+        case 6:
+            populate_events($data, $ascPdo, $users, $eventTypes);
+            break;
+    }
 }
 
 fclose($file);
@@ -72,29 +78,36 @@ function db_connect_root($dbName) {
 }
 
 function role_setup() {
-    if (get_role("tutor") !== null &&
-        get_role("asc_staff") !== null &&
+    if (get_role("tutor") !== null ||
+        get_role("asc_staff") !== null ||
         get_role("asc_admin") !== null) {
-        return;
+        
+        remove_role("tutor");
+        remove_role("asc_staff");
+        remove_role("asc_admin");
+
+        add_role("tutor", "Tutor", [
+            "read" => true
+        ]);
+        
+        add_role("asc_staff", "ASC Staff", [
+            "read" => true,
+            "staff_control" => true
+        ]);
+
+        add_role("asc_admin", "ASC Admin", [
+            "read" => true,
+            "staff_control" => true,
+            "admin_control" => true
+        ]);
     }
     
-    remove_role("tutor");
-    remove_role("asc_staff");
-    remove_role("asc_admin");
-
-    add_role("tutor", "Tutor", [
-        "read" => true
-    ]);
+    $admin = get_role("administrator");
+    if ($admin) {
+        $admin->add_cap("staff_control");
+        $admin->add_cap("admin_control");
+    }
     
-    add_role("asc_staff", "ASC Staff", [
-        "read" => true,
-        "staff_control" => true
-    ]);
-
-    add_role("asc_admin", "ASC Admin", [
-        "read" => true,
-        "admin_control" => true
-    ]);
     return;
 }
 
@@ -105,6 +118,8 @@ function drop_tables($umbcPdo, $ascPdo) {
     $ascPdo->exec("DROP TABLE IF EXISTS schedule");
     $ascPdo->exec("DROP TABLE IF EXISTS courses");
     $ascPdo->exec("DROP TABLE IF EXISTS subjects");
+    $ascPdo->exec("DROP TABLE IF EXISTS events");
+    $ascPdo->exec("DROP TABLE IF EXISTS event_types");
 }
 
 function populate_subjects(&$data, $umbcPdo, $ascPdo) {
@@ -116,13 +131,13 @@ function populate_subjects(&$data, $umbcPdo, $ascPdo) {
         create_asc_subjects($ascPdo);
 
         $umbcStmt = $umbcPdo->prepare("INSERT INTO umbc_subjects 
-                                        (subject_code, subject_name) 
-                                        VALUES 
-                                        (:subject_code, :subject_name)");
+                                       (subject_code, subject_name) 
+                                       VALUES 
+                                       (:subject_code, :subject_name)");
         $ascStmt = $ascPdo->prepare("INSERT INTO subjects 
-                                    (subject_code, subject_name, subject_count) 
-                                    VALUES 
-                                    (:subject_code, :subject_name, :subject_count)");
+                                     (subject_code, subject_name, subject_count) 
+                                     VALUES 
+                                     (:subject_code, :subject_name, :subject_count)");
     }
 
     $stmtArr = [
@@ -131,12 +146,8 @@ function populate_subjects(&$data, $umbcPdo, $ascPdo) {
         ":subject_count" => 0
     ];
     
-    try{
     $umbcStmt->execute(array_slice($stmtArr, 0, 2, true));
     $ascStmt->execute($stmtArr);
-    } catch (PDOException $e) {
-        die("Statement Execution Filed: " . $e->getMessage() . "\n" . print_r($stmtArr, true));
-    }
     return;
 }
 
@@ -179,6 +190,7 @@ function populate_courses(&$data, $umbcPdo, $ascPdo, &$courses, &$courseId) {
     return;
 }
 
+
 function populate_users(&$data, $umbcPdo, $ascPdo, &$users) {
     static $umbcStmt = null;
     $sha2_hash = "b1923b6d56628956cb61deea096fd3453985cdc2e5dba766fc7495c409dd3a7e";  // "password" with salt
@@ -218,6 +230,7 @@ function populate_users(&$data, $umbcPdo, $ascPdo, &$users) {
 
 function populate_schedule(&$data, $umbcPdo, $ascPdo, &$courses, &$users) {
     static $ascStmt = null;
+    static $updateStmt = null;
     $DAYS = [
         "Monday" => "MON",
         "Tuesday" => "TUE",
@@ -230,26 +243,75 @@ function populate_schedule(&$data, $umbcPdo, $ascPdo, &$courses, &$users) {
         create_asc_schedule($ascPdo);
     
         $ascStmt = $ascPdo->prepare("INSERT INTO schedule
-                                    (user_id, course_id, day_of_week, start_time, end_time)
-                                    VALUES
-                                    (:user_id, :course_id, :day_of_week, :start_time, :end_time)");
+                                     (user_id, course_id, day_of_week, start_time, end_time)
+                                     VALUES
+                                     (:user_id, :course_id, :day_of_week, :start_time, :end_time)");
+        $updateStmt = $ascPdo->prepare("UPDATE courses 
+                                        SET course_count = course_count + 1 
+                                        WHERE course_id = :course_id");
     }
     
     $data["start_time"] = convert_time($data["start_time"]);
     $data["end_time"] = convert_time($data["end_time"]);
 
-    $ascStmt->execute([
+    $stmtArr = [
         ":user_id" => $users[$data["first_name"]],
         ":course_id" => $courses[$data["course_subject"] . $data["course_code"]],
         ":day_of_week" => $DAYS[$data["day_of_week"]],
         ":start_time" => $data["start_time"],
         ":end_time" => $data["end_time"]
-    ]);
+    ];
+
+    $ascStmt->execute($stmtArr);
+    $updateStmt->execute(array_slice($stmtArr, 1, 1, true));
 
     return;
 }
 
 
+function populate_event_types($data, $ascPdo, &$eventTypes) {
+    static $ascStmt = null;
+    static $event_id = 1;
+    if ($ascStmt == null) {
+        create_asc_event_types($ascPdo);
+    
+        $ascStmt = $ascPdo->prepare("INSERT INTO event_types (event_name) VALUES (:event_name)");
+    }
+    
+    $ascStmt->execute([
+        ":event_name" => $data["event_name"]
+    ]);
+
+    $eventTypes[$data["event_name"]] = $event_id;
+    $event_id++;
+    return;
+}
+
+
+function populate_events($data, $ascPdo, &$users, &$eventTypes) {
+    static $ascStmt = null;
+    if ($ascStmt == null) {
+        create_asc_events($ascPdo);
+    
+        $ascStmt = $ascPdo->prepare("INSERT INTO events 
+                                     (event_type, user_id, start_day, final_day, duration) 
+                                     VALUES 
+                                     (:event_type, :user_id, :start_day, :final_day, :duration)");
+    }
+
+    $data["start_day"] = create_datetime($data["start_day"]);
+    $data["final_day"] = create_datetime($data["final_day"]);
+
+    $ascStmt->execute([
+        ":event_type" => $eventTypes[$data["event_name"]],
+        ":user_id"    => $users[$data["first_name"]],
+        ":start_day"  => $data["start_day"],
+        ":final_day"  => $data["final_day"],
+        ":duration"   => $data["duration"] !== "NULL" ? intval($data["duration"]) : null
+    ]);
+
+}
+    
 function create_umbc_subjects($umbcPdo) {
     $umbcPdo->exec("CREATE TABLE umbc_subjects (
                     subject_code varchar(8) NOT NULL,
@@ -338,6 +400,7 @@ function clean_wp_users() {
     return;
 }
 
+
 function create_asc_schedule($ascPdo) {
     $ascPdo->exec("CREATE TABLE schedule (
                    schedule_id int(11) NOT NULL,
@@ -362,6 +425,7 @@ function create_asc_schedule($ascPdo) {
     return;
 }
 
+
 function convert_time($timeStr) {
     if ($timeStr == "Noon") {
         $timeStr = "12:00:00";
@@ -371,4 +435,50 @@ function convert_time($timeStr) {
         $timeStr = $time->format('H:i:s');
     }
     return $timeStr;
+}
+
+
+function create_asc_event_types($ascPdo) {
+    $ascPdo->exec("CREATE TABLE event_types (
+                   event_type_id int(11) NOT NULL,
+                   event_name varchar(16) NOT NULL)
+                   ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    $ascPdo->exec("ALTER TABLE event_types
+                   ADD PRIMARY KEY (event_type_id),
+                   ADD UNIQUE KEY event_name (event_name)");
+    $ascPdo->exec("ALTER TABLE event_types
+                   MODIFY event_type_id int(11) NOT NULL AUTO_INCREMENT");
+    return;
+}
+
+
+function create_asc_events($ascPdo) {
+    $ascPdo->exec("CREATE TABLE events (
+                   event_id int(11) NOT NULL,
+                   event_type int(11) NOT NULL,
+                   user_id bigint(20) UNSIGNED NOT NULL,
+                   start_day date NOT NULL,
+                   final_day date DEFAULT NULL,
+                   duration int(11) DEFAULT NULL) 
+                   ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    $ascPdo->exec("ALTER TABLE events
+                   ADD PRIMARY KEY (event_id),
+                   ADD UNIQUE KEY uq_events (user_id,event_type,start_day),
+                   ADD KEY fk_event_type (event_type),
+                   ADD KEY idx_user_id (user_id),
+                   ADD KEY idx_start_day (start_day)");
+    $ascPdo->exec("ALTER TABLE events
+                   MODIFY event_id int(11) NOT NULL AUTO_INCREMENT");
+    $ascPdo->exec("ALTER TABLE events
+                   ADD CONSTRAINT fk_event_type FOREIGN KEY (event_type) REFERENCES event_types (event_type_id),
+                   ADD CONSTRAINT fk_user_id_event FOREIGN KEY (user_id) REFERENCES wp_users (ID)");
+    return;
+}
+
+function create_datetime($dayShift) {
+    if ($dayShift != "NULL") {
+        $dayShift = intval($dayShift);
+        return (new DateTime())->modify("+{$dayShift} days")->format('Y-m-d');
+    }
+    return null;
 }
