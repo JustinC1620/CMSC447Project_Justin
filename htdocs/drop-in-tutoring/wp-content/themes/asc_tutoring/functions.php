@@ -510,7 +510,7 @@ add_action('rest_api_init', function() {
 });
 
 
-// Users REST API
+// Accounts REST API
 add_action('rest_api_init', function() {
     register_rest_route('asc-tutoring/v1', '/accounts', [
         'methods'             => 'POST',
@@ -955,94 +955,133 @@ function update_account(WP_REST_Request $request) {
     return rest_ensure_response(['updated' => true, 'user_id' => $user_id]);
 }
 
+//---------------------------------------------------------------------------------------------------------------------
+function db_connect_root($dbName) {
+    $host = "localhost";
+    $username = "root";
+    $password = "";
+
+    try {
+        $pdo = new PDO("mysql:host=$host;dbname=$dbName;charset=utf8mb4", $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    } catch (PDOException $e) {
+        die("Connection failed: " . $e->getMessage());
+    }
+    return $pdo;
+}
+
+// umbc_db REST API
+add_action('rest_api_init', function() {
+    register_rest_route('asc-tutoring/v1', '/umbc_db/accounts', [
+        'methods'             => 'GET',
+        'callback'            => 'get_umbc_accounts',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'search_str' => [
+                'required'          => true,
+                'validate_callback' => 'is_string',
+                'sanitize_callback' => 'sanitize_text_field',
+            ]
+        ],
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/umbc_db/courses', [
+        'methods'             => 'GET',
+        'callback'            => 'get_umbc_courses',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'search_str' => [
+                'required'          => true,
+                'validate_callback' => 'is_string',
+                'sanitize_callback' => 'sanitize_text_field',
+            ]
+        ],
+    ]);
+});
 
 
+function get_courses_accounts(WP_REST_Request $request) {
+    $search_str = $request->get_param('search_str');
 
-add_action('template_redirect', function() {
-    if (!isset($_GET['test']) || !current_user_can('administrator')) {
-        return;
+    if (strlen($search_str) < 1) {
+        return new WP_Error('invalid_param', 'search_str cannot be empty or whitespace.', ['status' => 400]);
     }
 
-        wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
-        wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+    $umbcPdo = db_connect_root('umbc_db');
+    try {
+        $stmt = $umbcPdo->prepare("SELECT 
+                                       c.course_id,
+                                       c.course_subject,
+                                       s.subject_name,
+                                       c.course_code,
+                                       c.course_name
+                                   FROM umbc_courses c
+                                   JOIN umbc_subjects s ON c.course_subject = s.subject_code
+                                   WHERE 
+                                       c.course_subject LIKE :search
+                                       OR s.subject_name LIKE :search
+                                       OR c.course_code LIKE :search
+                                       OR c.course_name LIKE :search
+                                   ORDER BY c.course_subject, c.course_code");
 
-    $start = microtime(true);
-    $cache_hit_schedule = wp_cache_get(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP) !== false;
-    $cache_hit_events   = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP) !== false;
+        if (!$stmt) {
+            error_log('UMBC course search: Failed to prepare statement.');
+            return new WP_Error('db_error', 'Query preparation failed.', ['status' => 500]);
+        }
 
-    [$mSubjects, $mCourses, $users, $mSchedule, $eventTypes, $uEvents] = management_query();
+        $stmt->bindValue(':search', '%' . $search_str . '%', PDO::PARAM_STR);
+        $stmt->execute();
 
-    $elapsed = round((microtime(true) - $start) * 1000, 2);
+        $umbc_courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    ?>
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Management Query Test</title>
-        <style>
-            body { font-family: sans-serif; padding: 24px; }
-            table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
-            th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
-            th { background: #f0f0f0; }
-            tr:nth-child(even) { background: #fafafa; }
-            .meta { color: #555; font-size: 14px; margin-bottom: 16px; }
-            h2 { margin-top: 32px; }
-        </style>
-    </head>
-    <body>
-        <h1>Management Query Test</h1>
+    } catch (PDOException $e) {
+        return new WP_Error('db_error', 'Failed to retrieve courses.', ['status' => 500]);
+    }
 
-        <form method="post">
-            <button type="submit" name="flush_cache">Flush Cache &amp; Re-run</button>
-        </form>
+    return rest_ensure_response(['success' => true, 'umbc_courses' => $umbc_courses]);
+}
 
-        <p class="meta" style="margin-top:12px">
-            <strong>Query time:</strong> <?= $elapsed ?>ms &nbsp;|&nbsp;
-            <strong>Schedule cache:</strong> <?= $cache_hit_schedule ? '✅ HIT' : '❌ MISS' ?> &nbsp;|&nbsp;
-            <strong>Events cache:</strong> <?= $cache_hit_events ? '✅ HIT' : '❌ MISS' ?>
-        </p>
 
-        <hr>
+function get_umbc_accounts(WP_REST_Request $request) {
+    $search_str = $request->get_param('search_str');
 
-        <?php
-        $sections = [
-            'Subjects'    => $mSubjects,
-            'Courses'     => $mCourses,
-            'Users'       => $users,
-            'Schedule'    => $mSchedule,
-            'Event Types' => $eventTypes,
-            'Events'      => $uEvents,
-        ];
+    if (strlen($search_str) < 1) {
+        return new WP_Error('invalid_param', 'search_str cannot be empty or whitespace.', ['status' => 400]);
+    }
 
-        foreach ($sections as $label => $data): ?>
-            <h2><?= esc_html($label) ?> <span style="font-weight:normal;font-size:14px">(<?= count($data) ?> rows)</span></h2>
+    $umbcPdo = db_connect_root('umbc_db');
+    try {
+        $stmt = $umbcPdo->prepare("SELECT
+                                       umbc_id,
+                                       first_name,
+                                       last_name,
+                                       umbc_email
+                                   FROM umbc_accounts
+                                   WHERE
+                                       umbc_id LIKE :search
+                                       OR first_name LIKE :search
+                                       OR last_name LIKE :search
+                                       OR umbc_email LIKE :search
+                                   ORDER BY last_name, first_name");
 
-            <?php if (empty($data)): ?>
-                <p><em>No data returned.</em></p>
-            <?php else: ?>
-                <table>
-                    <thead>
-                        <tr>
-                            <?php foreach (array_keys($data[0]) as $col): ?>
-                                <th><?= esc_html($col) ?></th>
-                            <?php endforeach; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($data as $row): ?>
-                            <tr>
-                                <?php foreach ($row as $val): ?>
-                                    <td><?= esc_html($val ?? 'NULL') ?></td>
-                                <?php endforeach; ?>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-        <?php endforeach; ?>
+        if (!$stmt) {
+            error_log('UMBC account search: Failed to prepare statement.');
+            return new WP_Error('db_error', 'Query preparation failed.', ['status' => 500]);
+        }
 
-    </body>
-    </html>
-    <?php
-    exit;
-});
+        $stmt->bindValue(':search', '%' . $search_str . '%', PDO::PARAM_STR);
+        $stmt->execute();
+
+        $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        error_log('UMBC account search query failed: ' . $e->getMessage());
+        return new WP_Error('db_error', 'Failed to retrieve accounts.', ['status' => 500]);
+    }
+
+    return rest_ensure_response(['success' => true, 'umbc_accounts' => $accounts]);
+}
