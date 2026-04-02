@@ -512,9 +512,9 @@ add_action('rest_api_init', function() {
 
 // Users REST API
 add_action('rest_api_init', function() {
-    register_rest_route('asc-tutoring/v1', '/users', [
+    register_rest_route('asc-tutoring/v1', '/accounts', [
         'methods'             => 'POST',
-        'callback'            => 'create_user',
+        'callback'            => 'create_account',
         'permission_callback' => function() {
             return current_user_can('admin_control');
         },
@@ -535,16 +535,16 @@ add_action('rest_api_init', function() {
                 'required'          => true,
                 'sanitize_callback' => 'sanitize_text_field',
             ],
-            'role' => [
+            'roles' => [
                 'required'          => true,
                 'sanitize_callback' => 'sanitize_text_field'
             ],
         ],
     ]);
 
-    register_rest_route('asc-tutoring/v1', '/users/(?P<user_id>\d+)', [
+    register_rest_route('asc-tutoring/v1', '/accounts/(?P<user_id>\d+)', [
         'methods'             => 'DELETE',
-        'callback'            => 'delete_user',
+        'callback'            => 'delete_account',
         'permission_callback' => function() {
             return current_user_can('admin_control');
         },
@@ -557,11 +557,11 @@ add_action('rest_api_init', function() {
         ],
     ]);
 
-    register_rest_route('asc-tutoring/v1', '/users/(?P<user_id>\d+)', [
+    register_rest_route('asc-tutoring/v1', '/accounts/(?P<user_id>\d+)', [
         'methods'             => 'PATCH',
-        'callback'            => 'update_user',
+        'callback'            => 'update_account',
         'permission_callback' => function() {
-            return current_user_can('staff_control');
+            return current_user_can('admin_control');
     },
         'args' => [
             'user_id' => [
@@ -569,9 +569,9 @@ add_action('rest_api_init', function() {
                 'validate_callback' => 'is_numeric',
                 'sanitize_callback' => 'absint'
             ],
-            'role' => [
+            'roles' => [
                 'required'          => true,
-                'sanitize_callback' => 'sanitize_text_field'
+                'validate_callback' => 'validate_roles'
             ]
         ],
     ]);
@@ -632,6 +632,25 @@ function is_umbc_id($id) {
     return true;
 }
 
+function validate_roles($roles) {
+    $valid_roles = ['tutor', 'asc_staff', 'asc_admin'];
+
+    if (count($roles) < 1 || count($roles) > 2) {
+        return false;
+    }
+
+    foreach ($roles as $role) {
+        if (!in_array($role, $valid_roles)) {
+            return false;
+        }
+    }
+
+    if (in_array('asc_staff', $roles) && in_array('asc_admin', $roles)) {
+        return false;
+    }
+
+    return true;
+}
 
 function create_schedule(WP_REST_Request $request) {
     global $wpdb;
@@ -864,6 +883,79 @@ function update_event(WP_REST_Request $request) {
 
     return rest_ensure_response(['updated' => true, 'event_id' => $event_id]);
 }
+
+
+function create_account(WP_REST_Request $request) {
+    global $wpdb;
+    $user_login = $request->get_param('user_login');
+    $user_email = $request->get_param('user_email');
+    $first_name = $request->get_param('first_name');
+    $last_name  = $request->get_param('last_name');
+    $roles      = $request->get_param('roles');
+
+    $user_id = wp_insert_user([
+        "user_login" => $user_login,
+        "user_email" => $user_email,
+        "first_name" => $first_name,
+        "last_name"  => $last_name,
+        "user_pass"  => wp_generate_password(64),
+        "role"       => $roles[0]
+    ]);
+
+    if (is_wp_error($user_id)) {
+        return new WP_Error('db_error', $user_id->get_error_message(), ['status' => 500]);
+    }
+    if (count($roles) == 2) {
+        $user = new WP_User($user_id);
+        $user->add_role($roles[1]);
+    }
+
+    return rest_ensure_response(['created' => true, 'user_id' => $user_id]);
+}
+
+
+function delete_account(WP_REST_Request $request) {
+    global $wpdb;
+    $user_id = $request->get_param('user_id');
+    $curr_user_id = get_current_user_id();
+
+    if ($user_id == $curr_user_id) {
+        return new WP_Error('invalid_user_id', 'Cannot delete the current user', ['status' => 400]);
+    }
+
+    $result = wp_delete_user($user_id);
+
+    if ($result === false) {
+        return new WP_Error('not_found', 'No user found with that ID', ['status' => 404]);
+    }
+
+    return rest_ensure_response(['deleted' => true, 'event_id' => $event_id]);
+}
+
+
+function update_account(WP_REST_Request $request) {
+    global $wpdb;
+    $user_id = $request->get_param('user_id');
+    $curr_user_id = get_current_user_id();
+
+    if ($user_id == $curr_user_id) {
+        return new WP_Error('invalid_user_id', 'Cannot modify the current user', ['status' => 400]);
+    }
+
+    $user = new WP_User($user_id);
+    if (!$user->exists()) {
+        return new WP_Error( 'user_not_found', 'User does not exist.', [ 'status' => 404 ] );
+    }
+
+    $user->set_role($roles[0]); 
+    if (count($roles) == 2) {
+        $user->add_role($roles[1]);
+    }
+
+    return rest_ensure_response(['updated' => true, 'user_id' => $user_id]);
+}
+
+
 
 
 add_action('template_redirect', function() {
