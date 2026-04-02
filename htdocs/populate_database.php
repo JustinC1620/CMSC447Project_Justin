@@ -16,6 +16,7 @@ $stage = 0;
 $courseId = COURSE_ID_BASE;
 $courses = [];
 $users = [];
+$eventTypes = [];
 
 role_setup();
 drop_tables($umbcPdo, $ascPdo);
@@ -25,9 +26,6 @@ while (($row = fgetcsv($file)) !== false) {
         $stage++;
         $headers = fgetcsv($file);
         $row = fgetcsv($file);
-    }
-    else if (count($row) == 1) {
-        die("Error Reading File: " . print_r($row, true));
     }
 
     if (($data = array_combine($headers, $row)) == false) {
@@ -52,11 +50,11 @@ while (($row = fgetcsv($file)) !== false) {
             break;
 
         case 5:
-            populate_event_types($data, $ascPdo);
+            populate_event_types($data, $ascPdo, $eventTypes);
             break;
 
         case 6:
-            populate_events($data, $ascPdo, $users);
+            populate_events($data, $ascPdo, $users, $eventTypes);
             break;
     }
 }
@@ -141,12 +139,8 @@ function populate_subjects(&$data, $umbcPdo, $ascPdo) {
         ":subject_count" => 0
     ];
     
-    try{
     $umbcStmt->execute(array_slice($stmtArr, 0, 2, true));
     $ascStmt->execute($stmtArr);
-    } catch (PDOException $e) {
-        die("Statement Execution Filed: " . $e->getMessage() . "\n" . print_r($stmtArr, true));
-    }
     return;
 }
 
@@ -265,7 +259,7 @@ function populate_event_types($data, $ascPdo, &$eventTypes) {
     static $ascStmt = null;
     static $event_id = 1;
     if ($ascStmt == null) {
-        create_asc_events($ascPdo);
+        create_asc_event_types($ascPdo);
     
         $ascStmt = $ascPdo->prepare("INSERT INTO event_types (event_name) VALUES (:event_name)");
     }
@@ -283,23 +277,23 @@ function populate_event_types($data, $ascPdo, &$eventTypes) {
 function populate_events($data, $ascPdo, &$users, &$eventTypes) {
     static $ascStmt = null;
     if ($ascStmt == null) {
-        create_asc_event_types($ascPdo);
+        create_asc_events($ascPdo);
     
-        $ascStmt = $ascPdo->prepare("INSERT INTO event_types 
+        $ascStmt = $ascPdo->prepare("INSERT INTO events 
                                      (event_type, user_id, start_day, final_day, duration) 
                                      VALUES 
                                      (:event_type, :user_id, :start_day, :final_day, :duration)");
     }
 
-    $data["start_day"] = create_datetime($data["start_day"]);
-    $data["final_day"] = create_datetime($data["final_day"]);
+    $data["start_day"] = create_datetime(intval($data["start_day"]));
+    $data["final_day"] = create_datetime(intval($data["final_day"]));
 
     $ascStmt->execute([
         ":event_type" => $eventTypes[$data["event_name"]],
         ":user_id"    => $users[$data["first_name"]],
         ":start_day"  => $data["start_day"],
         ":final_day"  => $data["final_day"],
-        ":duration"   => $data["duration"] !== "NULL" ? int($data["duration"]) : null
+        ":duration"   => $data["duration"] !== "NULL" ? intval($data["duration"]) : null
     ]);
 
 }

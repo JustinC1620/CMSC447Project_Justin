@@ -88,6 +88,7 @@ function events_db_query() {
 
 function u_get_schedule_data($uScheduleObj) {
     $uSubjects = []; $uCourses = []; $uSchedule = [];
+    $course_index = [];
     foreach ($uScheduleObj as $row) {
         if (!isset($uSubjects[$row->subject_code])) {
             $uSubjects[$row->subject_code] = [
@@ -96,8 +97,9 @@ function u_get_schedule_data($uScheduleObj) {
             ];
         }
 
-        if (!isset($uCourses[$row->course_id])) {
-            $uCourses[$row->course_id] = [
+        if (!isset($course_index[$row->course_id])) {
+            $course_index[$row->course_id] = true;
+            $uCourses[$row->course_subject][] = [
                 "course_id"      => $row->course_id,
                 "course_code"    => $row->course_code,
                 "course_subject" => $row->course_subject,
@@ -105,7 +107,7 @@ function u_get_schedule_data($uScheduleObj) {
             ];
         }
 
-        $uSchedule[] = [
+        $uSchedule[$row->course_id][] = [
             "user_id"        => $row->user_id,
             "first_name"     => $row->first_name,
             "course_id"      => $row->course_id,  
@@ -114,7 +116,7 @@ function u_get_schedule_data($uScheduleObj) {
             "end_time"       => $row->end_time
         ];
     }
-    return [array_values($uSubjects), array_values($uCourses), $uSchedule];
+    return [array_values($uSubjects), $uCourses, $uSchedule];
 }
 
 
