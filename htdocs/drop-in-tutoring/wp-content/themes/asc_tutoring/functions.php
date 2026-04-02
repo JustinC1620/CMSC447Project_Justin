@@ -449,7 +449,6 @@ add_action('rest_api_init', function() {
                 'sanitize_callback' => 'absint',
                 'defualt'           => 'null'
             ],
-            
         ],
     ]);
 
@@ -469,41 +468,109 @@ add_action('rest_api_init', function() {
     ]);
 
     register_rest_route('asc-tutoring/v1', '/events/(?P<event_id>\d+)', [
-    'methods'             => 'PATCH',
-    'callback'            => 'update_event',
-    'permission_callback' => function() {
-        return current_user_can('staff_control');
+        'methods'             => 'PATCH',
+        'callback'            => 'update_event',
+        'permission_callback' => function() {
+            return current_user_can('staff_control');
     },
-    'args' => [
-        'event_id' => [
-            'required'          => true,
-            'validate_callback' => 'is_numeric',
-            'sanitize_callback' => 'absint',
+        'args' => [
+            'event_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint',
+            ],
+            'event_type' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'start_day' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_date_field',
+            ],
+            'final_day' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_date_field',
+            ],
+            'duration' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
         ],
-        'event_type' => [
-            'required'          => true,
-            'sanitize_callback' => 'sanitize_text_field'
+    ]);
+});
+
+// Users REST API
+add_action('rest_api_init', function() {
+    register_rest_route('asc-tutoring/v1', '/users', [
+        'methods'             => 'POST',
+        'callback'            => 'create_user',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'user_login' => [
+                'required'          => true,
+                'validate_callback' => 'is_umbc_id',
+            ],
+            'user_email' => [
+                'required'          => true,
+                'validate_callback' => 'is_email',
+            ],
+            'first_name' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'last_name' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'role' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field'
+            ],
         ],
-        'user_id' => [
-            'required'          => true,
-            'validate_callback' => 'is_numeric',
-            'sanitize_callback' => 'absint'
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/users/(?P<user_id>\d+)', [
+        'methods'             => 'DELETE',
+        'callback'            => 'delete_user',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
         ],
-        'start_day' => [
-            'required'          => true,
-            'sanitize_callback' => 'sanitize_date_field',
+    ]);
+
+    register_rest_route('asc-tutoring/v1', '/users/(?P<user_id>\d+)', [
+        'methods'             => 'PATCH',
+        'callback'            => 'update_user',
+        'permission_callback' => function() {
+            return current_user_can('staff_control');
+    },
+        'args' => [
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint'
+            ],
+            'role' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_text_field'
+            ]
         ],
-        'final_day' => [
-            'required'          => true,
-            'sanitize_callback' => 'sanitize_date_field',
-        ],
-        'duration' => [
-            'required'          => true,
-            'validate_callback' => 'is_numeric',
-            'sanitize_callback' => 'absint'
-        ],
-    ],
-]);
+    ]);
 });
 
 
@@ -549,6 +616,27 @@ function sanitize_date_field($date) {
     return $date->format('Y-m-d');
 }
 
+function is_email($email) {
+    if (!filter_var($v, FILTER_VALIDATE_EMAIL)) {
+        return new WP_Error(
+            'invalid_email',
+            "$email is not a valid email address",
+            ['status' => 400]
+        );
+    }
+    return true;
+}
+
+function is_umbc_id($id) {
+    if (!preg_match('/^[A-Z]{2}\d{5}$/', $id)) {
+        return new WP_Error(
+            'invalid_id',
+            "$id must be two uppercase letters followed by five digits (e.g. AB12345)",
+            ['status' => 400]
+        );
+    }
+    return true;
+}
 
 function create_schedule(WP_REST_Request $request) {
     global $wpdb;

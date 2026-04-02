@@ -78,29 +78,36 @@ function db_connect_root($dbName) {
 }
 
 function role_setup() {
-    if (get_role("tutor") !== null &&
-        get_role("asc_staff") !== null &&
+    if (get_role("tutor") !== null ||
+        get_role("asc_staff") !== null ||
         get_role("asc_admin") !== null) {
-        return;
+        
+        remove_role("tutor");
+        remove_role("asc_staff");
+        remove_role("asc_admin");
+
+        add_role("tutor", "Tutor", [
+            "read" => true
+        ]);
+        
+        add_role("asc_staff", "ASC Staff", [
+            "read" => true,
+            "staff_control" => true
+        ]);
+
+        add_role("asc_admin", "ASC Admin", [
+            "read" => true,
+            "staff_control" => true,
+            "admin_control" => true
+        ]);
     }
     
-    remove_role("tutor");
-    remove_role("asc_staff");
-    remove_role("asc_admin");
-
-    add_role("tutor", "Tutor", [
-        "read" => true
-    ]);
+    $admin = get_role("administrator");
+    if ($admin) {
+        $admin->add_cap("staff_control");
+        $admin->add_cap("admin_control");
+    }
     
-    add_role("asc_staff", "ASC Staff", [
-        "read" => true,
-        "staff_control" => true
-    ]);
-
-    add_role("asc_admin", "ASC Admin", [
-        "read" => true,
-        "admin_control" => true
-    ]);
     return;
 }
 
