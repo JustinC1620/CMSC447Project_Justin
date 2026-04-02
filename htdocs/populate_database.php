@@ -223,6 +223,7 @@ function populate_users(&$data, $umbcPdo, $ascPdo, &$users) {
 
 function populate_schedule(&$data, $umbcPdo, $ascPdo, &$courses, &$users) {
     static $ascStmt = null;
+    static $updateStmt = null;
     $DAYS = [
         "Monday" => "MON",
         "Tuesday" => "TUE",
@@ -238,18 +239,24 @@ function populate_schedule(&$data, $umbcPdo, $ascPdo, &$courses, &$users) {
                                      (user_id, course_id, day_of_week, start_time, end_time)
                                      VALUES
                                      (:user_id, :course_id, :day_of_week, :start_time, :end_time)");
+        $updateStmt = $ascPdo->prepare("UPDATE courses 
+                                        SET course_count = course_count + 1 
+                                        WHERE course_id = :course_id");
     }
     
     $data["start_time"] = convert_time($data["start_time"]);
     $data["end_time"] = convert_time($data["end_time"]);
 
-    $ascStmt->execute([
+    $stmtArr = [
         ":user_id" => $users[$data["first_name"]],
         ":course_id" => $courses[$data["course_subject"] . $data["course_code"]],
         ":day_of_week" => $DAYS[$data["day_of_week"]],
         ":start_time" => $data["start_time"],
         ":end_time" => $data["end_time"]
-    ]);
+    ];
+
+    $ascStmt->execute($stmtArr);
+    $updateStmt->execute(array_slice($stmtArr, 1, 1, true));
 
     return;
 }
@@ -285,8 +292,8 @@ function populate_events($data, $ascPdo, &$users, &$eventTypes) {
                                      (:event_type, :user_id, :start_day, :final_day, :duration)");
     }
 
-    $data["start_day"] = create_datetime(intval($data["start_day"]));
-    $data["final_day"] = create_datetime(intval($data["final_day"]));
+    $data["start_day"] = create_datetime($data["start_day"]);
+    $data["final_day"] = create_datetime($data["final_day"]);
 
     $ascStmt->execute([
         ":event_type" => $eventTypes[$data["event_name"]],
@@ -462,5 +469,9 @@ function create_asc_events($ascPdo) {
 }
 
 function create_datetime($dayShift) {
-    return $dayShift !== "NULL" ? (new DateTime())->modify("+{$dayShift} days")->format('Y-m-d H:i:s') : null;
+    if ($dayShift != "NULL") {
+        $dayShift = intval($dayShift);
+        return (new DateTime())->modify("+{$dayShift} days")->format('Y-m-d H:i:s');
+    }
+    return null;
 }
