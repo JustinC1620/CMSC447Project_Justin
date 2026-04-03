@@ -6,7 +6,7 @@ a:hover { text-decoration: underline; }
 h1 { font-family: "Helvetica Neue", Arial, Helvetica, sans-serif; font-size: 28px; line-height: 32px; margin: 0; padding: 0; }
 ul { margin: 8px 20px; padding: 0; }
 li { margin-top: 8px; }
-#logo { position: absolute; top: -54px; left: 16px; background-image: url("/shared/images/sprites.png"); background-repeat: no-repeat; background-position: 0 0; }
+#logo { position: absolute; top: -54px; left: 16px; background-image: url("../assets/base/icons/umbc_sprites.png"); background-repeat: no-repeat; background-position: 0 0; }
 #logo a { display: block; height: 48px; width: 217px; }
 #security-tip { position: absolute; top: 0; left: 0; width: 100%;  }
 #security-tip .content { overflow: hidden; margin: 8px; background-color: #122232; color: #FFF; padding: 8px 16px; -webkit-border-radius: 8px; -moz-border-radius: 8px; }

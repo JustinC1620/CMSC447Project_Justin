@@ -182,15 +182,58 @@
                         <ul id="primary-menu" class="menu">
                             <li class="menu-item menu-item-has-children top-level">
                                 <a href="https://academicsuccess.umbc.edu/">Academic Success Center</a>
+                                <ul class="sub-menu">
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/staff/">Academic Success Center Staff</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/message-from-associate-vice-provost-and-dean/">Message from Associate Vice Provost and Assistant Dean</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/mission-and-core-values/">Mission and Core Values</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/innovation-recognition-national-reach/">Innovation, Recognition and National Reach</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/claim-your-future/academic-success-center-advisory-board/">Academic Success Center Advisory Board</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/faculty-and-staff-resources/">Faculty and Staff Resources</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/partner-with-the-asc/">Partner with the ASC</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/work-with-the-academic-success-center/">Employment Opportunities with the ASC</a></li>
+                                    <li class="menu-item"><a href="https://www.givecampus.com/campaigns/41278/donations/new?designation=andreavsprattlearningresourcecenter&">Giving</a></li>
+                                </ul>
                             </li>
                             <li class="menu-item menu-item-has-children top-level">
                                 <a href="https://academicsuccess.umbc.edu/academic-policy/">Academic Policy</a>
+                                <ul class="sub-menu">
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/course-repeat-petitions/">Course Repeat Petitions</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/late-add-petitions/">Late-Add Petitions</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/graduation-requirement-petition/">Graduation Requirement Petitions</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/grading-method-petition/">Grading Method Petition</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/non-applicable-semester-petition/">Non-Applicable Semester Petitions</a></li>
+                                </ul>
                             </li>
                             <li class="menu-item menu-item-has-children top-level">
                                 <a href="https://academicsuccess.umbc.edu/academic-learning-resources/">Academic Learning Resources</a>
+                                <ul class="sub-menu">
+                                    <li class="menu-item menu-item-has-children">
+                                        <a href="https://academicsuccess.umbc.edu/tutoring/">Tutoring</a>
+                                        <ul class="sub-menu">
+                                            <li class="menu-item"><a href="https://academicsuccess.umbc.edu/appointment-tutoring/">Appointment Tutoring</a></li>
+                                            <li class="menu-item"><a href="https://academicsuccess.umbc.edu/drop-in-tutoring/">Drop-In Tutoring</a></li>
+                                            <li class="menu-item"><a href="https://academicsuccess.umbc.edu/writing-center/">Writing Center</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="menu-item menu-item-has-children">
+                                        <a href="https://academicsuccess.umbc.edu/si-pass/">SI PASS</a>
+                                        <ul class="sub-menu">
+                                            <li class="menu-item"><a href="https://academicsuccess.umbc.edu/si-pass/si-pass-schedule/">SI PASS Schedule</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/student-resources/">Student Resources</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/academic-success-meetings/">Academic Skills Meetings</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/early-academic-alerts/">Early Academic Alerts</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/placement-testing/">Placement Testing</a></li>
+                                </ul>
                             </li>
                             <li class="menu-item menu-item-has-children top-level">
                                 <a href="https://academicsuccess.umbc.edu/academic-advocacy/">Academic Advocacy</a>
+                                <ul class="sub-menu">
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/coordinated-care/">Coordinated Care</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/academic-peer-advocate-program/">Academic Peer Advocacy</a></li>
+                                    <li class="menu-item"><a href="https://academicsuccess.umbc.edu/submit-a-referral/">Submit an Academic Advocate Referral</a></li>
+                                </ul>
                             </li>
                         </ul>
 

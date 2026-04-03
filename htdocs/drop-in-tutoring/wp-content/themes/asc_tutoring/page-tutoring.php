@@ -22,34 +22,16 @@ function tutoring_day_label($day) {
 }
 
 function tutoring_format_time($time) {
-    $ts = strtotime($time);
-    if (!$ts) {
-        return esc_html($time);
-    }
-
-    $formatted = date('g:i a', $ts);
-    $formatted = str_replace(['12:00 pm', '12:00 am'], ['Noon', 'Midnight'], strtolower($formatted));
-    return ucwords($formatted);
+    $formatted = str_replace(['am', 'pm'], ['a.m.', 'p.m.'], 
+                             DateTime::createFromFormat('H:i:s', $time)->format('g:i a'));
+    $formatted = str_replace(['12:00 p.m.', '12:00 a.m.'], ['Noon', 'Midnight'], strtolower($formatted));
+    return $formatted;
 }
 
 function tutoring_subject_heading($subject) {
     return esc_html($subject['subject_name']) . ' Courses';
 }
 
-/*
- * Build lookups:
- * - courses by subject_code
- * - schedule rows by course_id
- */
-$courses_by_subject = [];
-foreach ($uCourses as $course) {
-    $courses_by_subject[$course['course_subject']][] = $course;
-}
-
-$schedule_by_course = [];
-foreach ($uSchedule as $row) {
-    $schedule_by_course[$row['course_id']][] = $row;
-}
 ?>
 
 <main id="main" class="container">
@@ -98,14 +80,18 @@ foreach ($uSchedule as $row) {
         </p>
 
         <h2>Available Courses</h2>
-        <ul aria-label="Available courses navigation" class="list-inline">
+        <ul 
+          aria-label="Available courses navigation" 
+          class="list-inline"
+          style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0px 12px; padding: 0; list-style: none;"
+        >
           <li>
             <button type="button" class="button button-secondary subject-filter-button active" data-subject="all">
               Show All
             </button>
           </li>
           <?php foreach ($uSubjects as $subject): ?>
-            <?php if (!empty($courses_by_subject[$subject['subject_code']])): ?>
+            <?php if (!empty($uCourses[$subject['subject_code']])): ?>
               <li>
                 <button
                   type="button"
@@ -122,7 +108,7 @@ foreach ($uSchedule as $row) {
         $expander_id = 1000;
         foreach ($uSubjects as $subject):
           $subject_code = $subject['subject_code'];
-          $subject_courses = $courses_by_subject[$subject_code] ?? [];
+          $subject_courses = $uCourses[$subject_code] ?? [];
 
           if (empty($subject_courses)) {
               continue;
@@ -134,7 +120,7 @@ foreach ($uSchedule as $row) {
 
           <?php foreach ($subject_courses as $course): ?>
             <?php
-              $course_schedule = $schedule_by_course[$course['course_id']] ?? [];
+              $course_schedule = $uSchedule[$course['course_id']] ?? [];
               $days = [];
 
               foreach ($course_schedule as $row) {
@@ -248,57 +234,4 @@ foreach ($uSchedule as $row) {
   outline: 2px solid #000;
 }
 </style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const triggers = document.querySelectorAll('.sights-expander-trigger');
-
-  triggers.forEach(function (trigger) {
-    trigger.addEventListener('click', function () {
-      const contentId = trigger.getAttribute('aria-controls');
-      const content = document.getElementById(contentId);
-      if (!content) return;
-
-      const isExpanded = trigger.getAttribute('aria-expanded') === 'true';
-
-      trigger.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
-      content.classList.toggle('sights-expander-hidden', isExpanded);
-    });
-
-    trigger.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        trigger.click();
-      }
-    });
-  });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-  const filterButtons = document.querySelectorAll('.subject-filter-button');
-  const subjectSections = document.querySelectorAll('.subject-section');
-
-  filterButtons.forEach(function (button) {
-    button.addEventListener('click', function () {
-      const subject = button.getAttribute('data-subject');
-
-      filterButtons.forEach(function (btn) {
-        btn.classList.remove('active');
-      });
-      button.classList.add('active');
-
-      subjectSections.forEach(function (section) {
-        const sectionSubject = section.getAttribute('data-subject');
-
-        if (subject === 'all' || subject === sectionSubject) {
-          section.style.display = '';
-        } else {
-          section.style.display = 'none';
-        }
-      });
-    });
-  });
-});
-</script>
-
 <?php get_footer(); ?>
