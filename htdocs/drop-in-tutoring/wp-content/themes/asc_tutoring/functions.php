@@ -6,7 +6,7 @@ const USER_CACHE_GROUP       = "user_group";
 const M_SCHEDULE_CACHE_KEY   = "management_schedule";
 const MANAGEMENT_CACHE_GROUP = "management_group";
 
-
+//---------------------------------------------------------------------------------------------------------------------
 function user_query() {
     $uScheduleData = wp_cache_get(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
 
@@ -141,6 +141,7 @@ function u_get_events_data($eventsObj) {
     }
     return [array_values($eventTypes), $uEvents];
 }
+//---------------------------------------------------------------------------------------------------------------------
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -311,6 +312,7 @@ function m_get_events_data($eventsObj) {
     }
     return [array_values($eventTypes), $mEvents];
 }
+//---------------------------------------------------------------------------------------------------------------------
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -333,36 +335,52 @@ add_action('wp_enqueue_scripts', function() {
 // Schedule REST API
 add_action('rest_api_init', function() {
     register_rest_route('asc-tutoring/v1', '/schedule', [
-        'methods'             => 'POST',
-        'callback'            => 'create_schedule',
-        'permission_callback' => function() {
-            return current_user_can('admin_control');
-        },
-        'args' => [
-            'user_id' => [
-                'required'          => true,
-                'validate_callback' => 'is_numeric',
-                'sanitize_callback' => 'absint'
-            ],
-            'course_id' => [
-                'required'          => true,
-                'validate_callback' => 'is_numeric',
-                'sanitize_callback' => 'absint'
-            ],
-            'day_of_week' => [
-                'required'          => true,
-                'sanitize_callback' => 'sanitize_day_field',
-            ],
-            'start_time' => [
-                'required'          => true,
-                'sanitize_callback' => 'sanitize_time_field',
-            ],
-            'end_time' => [
-                'required'          => true,
-                'sanitize_callback' => 'sanitize_time_field',
-            ],
+    'methods'             => 'POST',
+    'callback'            => 'create_schedule',
+    'permission_callback' => function() {
+        return current_user_can('admin_control');
+    },
+    'args' => [
+        'user_id' => [
+            'required'          => true,
+            'validate_callback' => 'is_numeric',
+            'sanitize_callback' => 'absint'
         ],
-    ]);
+        'course_id' => [
+            'required'          => true,
+            'validate_callback' => 'is_numeric',
+            'sanitize_callback' => 'absint'
+        ],
+        'day_of_week' => [
+            'required'          => true,
+            'sanitize_callback' => 'sanitize_day_field',
+        ],
+        'start_time' => [
+            'required'          => true,
+            'sanitize_callback' => 'sanitize_time_field',
+        ],
+        'end_time' => [
+            'required'          => true,
+            'sanitize_callback' => 'sanitize_time_field',
+        ],
+        'course_subject' => [
+            'required'          => false,
+            'sanitize_callback' => 'sanitize_text_field',
+        ],
+        'subject_name' => [
+            'required'          => false,
+            'sanitize_callback' => 'sanitize_text_field',
+        ],
+        'course_code' => [
+            'required'          => false,
+            'sanitize_callback' => 'sanitize_text_field',
+        ],
+        'course_name' => [
+            'required'          => false,
+            'sanitize_callback' => 'sanitize_text_field',
+        ],
+    ],
+]);
 
     register_rest_route('asc-tutoring/v1', '/schedule/(?P<schedule_id>\d+)', [
         'methods'             => 'DELETE',
@@ -380,41 +398,57 @@ add_action('rest_api_init', function() {
     ]);
 
     register_rest_route('asc-tutoring/v1', '/schedule/(?P<schedule_id>\d+)', [
-    'methods'             => 'PATCH',
-    'callback'            => 'update_schedule',
-    'permission_callback' => function() {
-        return current_user_can('admin_control');
-    },
-    'args' => [
-        'schedule_id' => [
-            'required'          => true,
-            'validate_callback' => 'is_numeric',
-            'sanitize_callback' => 'absint',
+        'methods'             => 'PATCH',
+        'callback'            => 'update_schedule',
+        'permission_callback' => function() {
+            return current_user_can('admin_control');
+        },
+        'args' => [
+            'schedule_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint',
+            ],
+            'user_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint',
+            ],
+            'course_id' => [
+                'required'          => true,
+                'validate_callback' => 'is_numeric',
+                'sanitize_callback' => 'absint',
+            ],
+            'day_of_week' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_day_field',
+            ],
+            'start_time' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_time_field',
+            ],
+            'end_time' => [
+                'required'          => true,
+                'sanitize_callback' => 'sanitize_time_field',
+            ],
+            'course_subject' => [
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'subject_name' => [
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'course_code' => [
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'course_name' => [
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
         ],
-        'user_id' => [
-            'required'          => true,
-            'validate_callback' => 'is_numeric',
-            'sanitize_callback' => 'absint',
-        ],
-        'course_id' => [
-            'required'          => true,
-            'validate_callback' => 'is_numeric',
-            'sanitize_callback' => 'absint',
-        ],
-        'day_of_week' => [
-            'required'          => true,
-            'sanitize_callback' => 'sanitize_day_field',
-        ],
-        'start_time' => [
-            'required'          => true,
-            'sanitize_callback' => 'sanitize_time_field',
-        ],
-        'end_time' => [
-            'required'          => true,
-            'sanitize_callback' => 'sanitize_time_field',
-        ],
-    ],
-]);
+    ]);
 });
 
 
@@ -654,39 +688,126 @@ function validate_roles($roles) {
 
 function create_schedule(WP_REST_Request $request) {
     global $wpdb;
-    $user_id = $request->get_param('user_id');
-    $course_id = $request->get_param('course_id');
+    $user_id     = $request->get_param('user_id');
+    $course_id   = $request->get_param('course_id');
     $day_of_week = $request->get_param('day_of_week');
-    $start_time = $request->get_param('start_time');
-    $end_time = $request->get_param('end_time');
+    $start_time  = $request->get_param('start_time');
+    $end_time    = $request->get_param('end_time');
 
     if ($day_of_week === false) {
         return new WP_Error('invalid_day', 'Invalid day of week', ['status' => 400]);
     }
-
     if ($start_time === false) {
         return new WP_Error('invalid_start_time', 'Invalid start time format', ['status' => 400]);
     }
-
     if ($end_time === false) {
         return new WP_Error('invalid_end_time', 'Invalid end time format', ['status' => 400]);
+    }
+
+    $wpdb->query('START TRANSACTION');
+
+    $course_exists = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM courses WHERE course_id = %d",
+        $course_id
+    ));
+
+    if (!$course_exists) {
+        $course_subject = $request->get_param('course_subject');
+        $subject_name   = $request->get_param('subject_name');
+        $course_code    = $request->get_param('course_code');
+        $course_name    = $request->get_param('course_name');
+
+        if (!$course_subject || !$course_code || !$course_name) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('missing_course_data', 
+                                'course_subject, course_code, and course_name are required for new courses.',
+                                 ['status' => 400]);
+        }
+
+        $subject_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM subjects WHERE subject_code = %s",
+            $course_subject
+        ));
+
+        if (!$subject_exists) {
+            if (!$subject_name) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('missing_subject_data', 
+                                    'subject_name is required for new subjects.', ['status' => 400]);
+            }
+
+            $result = $wpdb->insert(
+                'subjects',
+                [
+                    'subject_code'  => $course_subject,
+                    'subject_name'  => $subject_name,
+                    'subject_count' => 0
+                ],
+                ['%s', '%s', '%d']
+            );
+
+            if ($result === false) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+            }
+        }
+
+        $result = $wpdb->insert(
+            'courses',
+            [
+                'course_id'      => $course_id,
+                'course_subject' => $course_subject,
+                'course_code'    => $course_code,
+                'course_name'    => $course_name,
+                'course_count'   => 0
+            ],
+            ['%d', '%s', '%s', '%s', '%d']
+        );
+
+        if ($result === false) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+        }
+
+        $result = $wpdb->query($wpdb->prepare(
+            "UPDATE subjects SET subject_count = subject_count + 1 WHERE subject_code = %s",
+            $course_subject
+        ));
+
+        if ($result === false) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+        }
     }
 
     $result = $wpdb->insert(
         'schedule',
         [
-            'user_id' => $user_id,
-            'course_id' => $course_id,
+            'user_id'     => $user_id,
+            'course_id'   => $course_id,
             'day_of_week' => $day_of_week,
-            'start_time' => $start_time,
-            'end_time' => $end_time
+            'start_time'  => $start_time,
+            'end_time'    => $end_time
         ],
         ['%d', '%d', '%s', '%s', '%s']
     );
 
     if ($result === false) {
+        $wpdb->query('ROLLBACK');
         return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
     }
+
+    $result = $wpdb->query($wpdb->prepare(
+        "UPDATE courses SET course_count = course_count + 1 WHERE course_id = %d",
+        $course_id
+    ));
+
+    if ($result === false) {
+        $wpdb->query('ROLLBACK');
+        return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+    }
+
+    $wpdb->query('COMMIT');
 
     wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
     wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
@@ -698,7 +819,19 @@ function create_schedule(WP_REST_Request $request) {
 function delete_schedule(WP_REST_Request $request) {
     global $wpdb;
     $schedule_id = $request->get_param('schedule_id');
-    
+
+    // Get the course_id before deleting
+    $course_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT course_id FROM schedule WHERE schedule_id = %d",
+        $schedule_id
+    ));
+
+    if ($course_id === null) {
+        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+    }
+
+    $wpdb->query('START TRANSACTION');
+
     $result = $wpdb->delete(
         'schedule',
         ['schedule_id' => $schedule_id],
@@ -706,13 +839,22 @@ function delete_schedule(WP_REST_Request $request) {
     );
 
     if ($result === false) {
+        $wpdb->query('ROLLBACK');
         return new WP_Error('db_error', 'Failed to delete schedule', ['status' => 500]);
     }
 
-    if ($result === 0) {
-        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+    $result = $wpdb->query($wpdb->prepare(
+        "UPDATE courses SET course_count = course_count - 1 WHERE course_id = %d",
+        $course_id
+    ));
+
+    if ($result === false) {
+        $wpdb->query('ROLLBACK');
+        return new WP_Error('db_error', 'Failed to decrement course count', ['status' => 500]);
     }
-    
+
+    $wpdb->query('COMMIT');
+
     wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
     wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
@@ -732,13 +874,122 @@ function update_schedule(WP_REST_Request $request) {
     if ($day_of_week === false) {
         return new WP_Error('invalid_day', 'Invalid day of week', ['status' => 400]);
     }
-
     if ($start_time === false) {
         return new WP_Error('invalid_start_time', 'Invalid start time format', ['status' => 400]);
     }
-
     if ($end_time === false) {
         return new WP_Error('invalid_end_time', 'Invalid end time format', ['status' => 400]);
+    }
+
+    // Get the current course_id before making any changes
+    $old_course_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT course_id FROM schedule WHERE schedule_id = %d",
+        $schedule_id
+    ));
+
+    if ($old_course_id === null) {
+        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+    }
+
+    $wpdb->query('START TRANSACTION');
+
+    $course_changed = (int)$old_course_id !== (int)$course_id;
+
+    // Check if the new course exists
+    $course_exists = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM courses WHERE course_id = %d",
+        $course_id
+    ));
+
+    if (!$course_exists) {
+        $course_subject = $request->get_param('course_subject');
+        $subject_name   = $request->get_param('subject_name');
+        $course_code    = $request->get_param('course_code');
+        $course_name    = $request->get_param('course_name');
+
+        if (!$course_subject || !$course_code || !$course_name) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('missing_course_data', 
+                                'course_subject, course_code, and course_name are required for new courses.', 
+                                ['status' => 400]);
+        }
+
+        $subject_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM subjects WHERE subject_code = %s",
+            $course_subject
+        ));
+
+        if (!$subject_exists) {
+            if (!$subject_name) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('missing_subject_data', 
+                                    'subject_name is required for new subjects.', ['status' => 400]);
+            }
+
+            $result = $wpdb->insert(
+                'subjects',
+                [
+                    'subject_code'  => $course_subject,
+                    'subject_name'  => $subject_name,
+                    'subject_count' => 0
+                ],
+                ['%s', '%s', '%d']
+            );
+
+            if ($result === false) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+            }
+        }
+
+        $result = $wpdb->insert(
+            'courses',
+            [
+                'course_id'      => $course_id,
+                'course_subject' => $course_subject,
+                'course_code'    => $course_code,
+                'course_name'    => $course_name,
+                'course_count'   => 0
+            ],
+            ['%d', '%s', '%s', '%s', '%d']
+        );
+
+        if ($result === false) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+        }
+
+        $result = $wpdb->query($wpdb->prepare(
+            "UPDATE subjects SET subject_count = subject_count + 1 WHERE subject_code = %s",
+            $course_subject
+        ));
+
+        if ($result === false) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+        }
+    }
+
+    if ($course_changed) {
+        $result = $wpdb->query($wpdb->prepare(
+            "UPDATE courses SET course_count = course_count - 1 WHERE course_id = %d",
+            $old_course_id
+        ));
+
+        if ($result === false) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+        }
+
+        $result = $wpdb->query($wpdb->prepare(
+            "UPDATE courses SET course_count = course_count + 1 WHERE course_id = %d",
+            $course_id
+        ));
+
+        if ($result === false) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+        }
     }
 
     $result = $wpdb->update(
@@ -756,12 +1007,11 @@ function update_schedule(WP_REST_Request $request) {
     );
 
     if ($result === false) {
+        $wpdb->query('ROLLBACK');
         return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
     }
 
-    if ($result === 0) {
-        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
-    }
+    $wpdb->query('COMMIT');
 
     wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
     wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
@@ -910,12 +1160,13 @@ function create_account(WP_REST_Request $request) {
         $user->add_role($roles[1]);
     }
 
+    wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+
     return rest_ensure_response(['created' => true, 'user_id' => $user_id]);
 }
 
 
 function delete_account(WP_REST_Request $request) {
-    global $wpdb;
     $user_id = $request->get_param('user_id');
     $curr_user_id = get_current_user_id();
 
@@ -923,13 +1174,36 @@ function delete_account(WP_REST_Request $request) {
         return new WP_Error('invalid_user_id', 'Cannot delete the current user', ['status' => 400]);
     }
 
+    $is_tutor = false;
+    $user = new WP_User($user_id);
+    if (in_array('tutor', $user->roles)) {
+        $is_tutor = true;
+    }
+
+    $wpdb->query('START TRANSACTION');
+    $cleaned = clean_up_user($user_id);
+
+    if (is_wp_error($cleaned)) {
+        $wpdb->query('ROLLBACK');
+        return $cleaned;
+    }
+
     $result = wp_delete_user($user_id);
 
     if ($result === false) {
+        $wpdb->query('ROLLBACK');
         return new WP_Error('not_found', 'No user found with that ID', ['status' => 404]);
     }
 
-    return rest_ensure_response(['deleted' => true, 'event_id' => $event_id]);
+    $wpdb->query('COMMIT');
+
+    if ($is_tutor) {
+        wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+        wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
+    }
+    wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+
+    return rest_ensure_response(['deleted' => true, 'account_id' => $account_id]);
 }
 
 
@@ -937,6 +1211,7 @@ function update_account(WP_REST_Request $request) {
     global $wpdb;
     $user_id = $request->get_param('user_id');
     $curr_user_id = get_current_user_id();
+    $roles = $request->get_param('roles');
 
     if ($user_id == $curr_user_id) {
         return new WP_Error('invalid_user_id', 'Cannot modify the current user', ['status' => 400]);
@@ -944,16 +1219,64 @@ function update_account(WP_REST_Request $request) {
 
     $user = new WP_User($user_id);
     if (!$user->exists()) {
-        return new WP_Error( 'user_not_found', 'User does not exist.', [ 'status' => 404 ] );
+        return new WP_Error('user_not_found', 'User does not exist.', ['status' => 404]);
     }
 
-    $user->set_role($roles[0]); 
+    $was_tutor = false;
+    if (in_array('tutor', $user->roles)) {
+        $was_tutor = true;
+    }
+
+    $wpdb->query('START TRANSACTION');
+
+    $user->set_role($roles[0]);
     if (count($roles) == 2) {
         $user->add_role($roles[1]);
     }
 
+    if (!in_array('tutor', $roles) && $was_tutor) {
+        $cleaned = clean_up_user($user_id);
+        if (is_wp_error($cleaned)) {
+            $wpdb->query('ROLLBACK');
+            return $cleaned;
+        }
+
+        wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+        wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
+    }
+
+    $wpdb->query('COMMIT');
+
+    wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+
     return rest_ensure_response(['updated' => true, 'user_id' => $user_id]);
 }
+
+function clean_up_user($user_id) {
+    global $wpdb;
+
+    $result = $wpdb->delete(
+        'events',
+        ['user_id' => $user_id],
+        ['%s']
+    );
+    
+    if ($result === false) {
+        return new WP_Error('db_error', 'Failed to delete event', ['status' => 500]);
+    }
+
+    $result = $wpdb->delete(
+        'schedule',
+        ['user_id' => $user_id],
+        ['%s']
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', 'Failed to delete schedule', ['status' => 500]);
+    }
+}
+//---------------------------------------------------------------------------------------------------------------------
+
 
 //---------------------------------------------------------------------------------------------------------------------
 function db_connect_root($dbName) {
@@ -1085,3 +1408,4 @@ function get_umbc_accounts(WP_REST_Request $request) {
 
     return rest_ensure_response(['success' => true, 'umbc_accounts' => $accounts]);
 }
+//---------------------------------------------------------------------------------------------------------------------
