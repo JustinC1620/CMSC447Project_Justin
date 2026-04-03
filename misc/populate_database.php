@@ -63,19 +63,6 @@ fclose($file);
 echo "Database Populated";
 
 //---------------------------------------------------------------------------------------------------------------------
-function db_connect_root($dbName) {
-    $host = "localhost";
-    $username = "root";
-    $password = "";
-
-    try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbName;charset=utf8mb4", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    } catch (PDOException $e) {
-        die("Connection failed: " . $e->getMessage());
-    }
-    return $pdo;
-}
 
 function role_setup() {
     if (get_role("tutor") !== null ||

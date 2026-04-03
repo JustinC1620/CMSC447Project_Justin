@@ -395,3 +395,300 @@ function mobile_navigation_enable() {
 document.addEventListener("DOMContentLoaded", () => {
   resize_fn();
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+  const messageBox = document.getElementById('tutoring-admin-message');
+
+  const showMessage = (text, type = 'success') => {
+    messageBox.textContent = text;
+    messageBox.className = `tutoring-admin-message ${type}`;
+    messageBox.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getNonceHeaders = () => ({
+    'Content-Type': 'application/json',
+    'X-WP-Nonce': (window.wpApiSettings && window.wpApiSettings.nonce) ? window.wpApiSettings.nonce : ''
+  });
+
+  const apiRoot = (window.wpApiSettings && window.wpApiSettings.root)
+    ? window.wpApiSettings.root.replace(/\/$/, '')
+    : '/wp-json';
+
+  const requestJson = async (endpoint, method = 'GET', body = null) => {
+    const options = {
+      method,
+      headers: getNonceHeaders()
+    };
+
+    if (body !== null) {
+      options.body = JSON.stringify(body);
+    } else if (method === 'GET') {
+      delete options.headers['Content-Type'];
+    }
+
+    const response = await fetch(`${apiRoot}/asc-tutoring/v1${endpoint}`, options);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Request failed.');
+    }
+
+    return data;
+  };
+
+  const tabs = document.querySelectorAll('.admin-tab');
+  const sections = document.querySelectorAll('.admin-section');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(btn => btn.classList.remove('active'));
+      sections.forEach(section => section.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`admin-tab-${tab.dataset.tab}`)?.classList.add('active');
+    });
+  });
+
+  const scheduleForm = document.getElementById('schedule-form');
+  const eventForm = document.getElementById('event-form');
+  const accountForm = document.getElementById('account-form');
+
+  document.getElementById('reset-schedule-form')?.addEventListener('click', () => scheduleForm.reset());
+  document.getElementById('reset-event-form')?.addEventListener('click', () => eventForm.reset());
+  document.getElementById('reset-account-form')?.addEventListener('click', () => accountForm.reset());
+
+  document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const row = e.target.closest('tr');
+      document.getElementById('schedule_id').value = row.dataset.scheduleId;
+      document.getElementById('schedule_user_id').value = row.dataset.userId;
+      document.getElementById('schedule_course_id').value = row.dataset.courseId;
+      const dayMap = {
+        MON: 'Monday',
+        TUE: 'Tuesday',
+        WED: 'Wednesday',
+        THU: 'Thursday',
+        FRI: 'Friday'
+      };
+      document.getElementById('schedule_day_of_week').value = dayMap[row.dataset.dayOfWeek] || '';
+      document.getElementById('schedule_start_time').value = row.dataset.startTime;
+      document.getElementById('schedule_end_time').value = row.dataset.endTime;
+      showMessage(`Loaded schedule ${row.dataset.scheduleId} into the form.`, 'success');
+    });
+  });
+
+  document.querySelectorAll('.admin-delete-schedule').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('tr');
+      const id = row.dataset.scheduleId;
+      if (!confirm(`Delete schedule entry ${id}?`)) return;
+
+      try {
+        await requestJson(`/schedule/${id}`, 'DELETE');
+        row.remove();
+        showMessage(`Deleted schedule entry ${id}.`);
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+  });
+
+  scheduleForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('schedule_id').value.trim();
+    const payload = {
+      user_id: Number(document.getElementById('schedule_user_id').value),
+      course_id: Number(document.getElementById('schedule_course_id').value),
+      day_of_week: document.getElementById('schedule_day_of_week').value,
+      start_time: document.getElementById('schedule_start_time').value,
+      end_time: document.getElementById('schedule_end_time').value,
+      course_subject: document.getElementById('course_subject').value,
+      subject_name: document.getElementById('subject_name').value,
+      course_code: document.getElementById('course_code').value,
+      course_name: document.getElementById('course_name').value
+    };
+
+    try {
+      if (id) {
+        await requestJson(`/schedule/${id}`, 'PATCH', payload);
+        showMessage(`Updated schedule entry ${id}. Reload to refresh the table.`);
+      } else {
+        const data = await requestJson('/schedule', 'POST', payload);
+        showMessage(`Created schedule entry ${data.schedule_id}. Reload to refresh the table.`);
+      }
+      scheduleForm.reset();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  });
+
+  document.querySelectorAll('.admin-edit-event').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const row = e.target.closest('tr');
+      document.getElementById('event_id').value = row.dataset.eventId;
+      document.getElementById('event_user_id').value = row.dataset.userId;
+      document.getElementById('event_type').value = row.dataset.eventType;
+      document.getElementById('start_day').value = row.dataset.startDay;
+      document.getElementById('final_day').value = row.dataset.finalDay;
+      document.getElementById('duration').value = row.dataset.duration;
+      showMessage(`Loaded event ${row.dataset.eventId} into the form.`, 'success');
+    });
+  });
+
+  document.querySelectorAll('.admin-delete-event').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('tr');
+      const id = row.dataset.eventId;
+      if (!confirm(`Delete event ${id}?`)) return;
+
+      try {
+        await requestJson(`/events/${id}`, 'DELETE');
+        row.remove();
+        showMessage(`Deleted event ${id}.`);
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+  });
+
+  eventForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('event_id').value.trim();
+    const payload = {
+      user_id: Number(document.getElementById('event_user_id').value),
+      event_type: Number(document.getElementById('event_type').value),
+      start_day: document.getElementById('start_day').value,
+      final_day: document.getElementById('final_day').value || null,
+      duration: document.getElementById('duration').value ? Number(document.getElementById('duration').value) : null
+    };
+
+    try {
+      if (id) {
+        await requestJson(`/events/${id}`, 'PATCH', payload);
+        showMessage(`Updated event ${id}. Reload to refresh the table.`);
+      } else {
+        const data = await requestJson('/events', 'POST', payload);
+        showMessage(`Created event ${data.event_id}. Reload to refresh the table.`);
+      }
+      eventForm.reset();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  });
+
+  document.querySelectorAll('.admin-edit-account').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const row = e.target.closest('tr');
+      document.getElementById('account_user_id').value = row.dataset.userId;
+      document.getElementById('user_login').value = row.dataset.userLogin || '';
+      document.getElementById('user_email').value = row.dataset.userEmail || '';
+      document.getElementById('first_name').value = row.dataset.firstName || '';
+      document.getElementById('last_name').value = row.dataset.lastName || '';
+
+      const roles = (row.dataset.roles || '').split(',').map(r => r.trim().toLowerCase());
+      accountForm.querySelectorAll('input[name="roles[]"]').forEach(cb => {
+        cb.checked = roles.includes(cb.value.toLowerCase());
+      });
+
+      showMessage(`Loaded account ${row.dataset.userId}. For existing users, only role updates are supported by the API.`, 'success');
+    });
+  });
+
+  document.querySelectorAll('.admin-delete-account').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('tr');
+      const id = row.dataset.userId;
+      if (!confirm(`Delete user ${id}?`)) return;
+
+      try {
+        await requestJson(`/accounts/${id}`, 'DELETE');
+        row.remove();
+        showMessage(`Deleted account ${id}.`);
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+  });
+
+  accountForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('account_user_id').value.trim();
+    const roles = Array.from(accountForm.querySelectorAll('input[name="roles[]"]:checked')).map(el => el.value);
+
+    if (roles.length === 0) {
+      showMessage('Select at least one role.', 'error');
+      return;
+    }
+
+    try {
+      if (id) {
+        await requestJson(`/accounts/${id}`, 'PATCH', { roles });
+        showMessage(`Updated roles for account ${id}. Reload to refresh the table.`);
+      } else {
+        const payload = {
+          user_login: document.getElementById('user_login').value.trim(),
+          user_email: document.getElementById('user_email').value.trim(),
+          first_name: document.getElementById('first_name').value.trim(),
+          last_name: document.getElementById('last_name').value.trim(),
+          roles
+        };
+        const data = await requestJson('/accounts', 'POST', payload);
+        showMessage(`Created account ${data.user_id}. Reload to refresh the table.`);
+      }
+
+      accountForm.reset();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  });
+
+  document.getElementById('lookup-accounts-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = document.getElementById('lookup-accounts-query').value.trim();
+    const box = document.getElementById('lookup-accounts-results');
+
+    try {
+      const data = await requestJson(`/umbc_db/accounts?search_str=${encodeURIComponent(query)}`, 'GET');
+      const rows = (data.umbc_accounts || []).map(account => `
+        <tr>
+          <td>${account.umbc_id}</td>
+          <td>${account.first_name} ${account.last_name}</td>
+          <td>${account.umbc_email}</td>
+        </tr>
+      `).join('');
+
+      box.innerHTML = rows
+        ? `<div class="umbc-table-wrapper"><table class="umbc-table"><thead><tr><th>UMBC ID</th><th>Name</th><th>Email</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        : `<p>No accounts found.</p>`;
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  });
+
+  document.getElementById('lookup-courses-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = document.getElementById('lookup-courses-query').value.trim();
+    const box = document.getElementById('lookup-courses-results');
+
+    try {
+      const data = await requestJson(`/umbc_db/courses?search_str=${encodeURIComponent(query)}`, 'GET');
+      const rows = (data.umbc_courses || []).map(course => `
+        <tr>
+          <td>${course.course_id}</td>
+          <td>${course.course_subject} ${course.course_code}</td>
+          <td>${course.course_name}</td>
+          <td>${course.subject_name}</td>
+        </tr>
+      `).join('');
+
+      box.innerHTML = rows
+        ? `<div class="umbc-table-wrapper"><table class="umbc-table"><thead><tr><th>Course ID</th><th>Course</th><th>Name</th><th>Subject</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        : `<p>No courses found.</p>`;
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  });
+});

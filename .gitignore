@@ -6,3 +6,4 @@
 !/database/**
 !/misc
 !/misc/**
+*.log

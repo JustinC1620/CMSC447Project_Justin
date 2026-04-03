@@ -145,6 +145,25 @@ function u_get_events_data($eventsObj) {
 
 
 //---------------------------------------------------------------------------------------------------------------------
+
+/*
+ * IMPORTANT:
+ * Do NOT use the shared EVENTS cache here.
+ *
+ * The public-facing page and the admin page build different event data structures:
+ *   - Public page uses u_get_events_data()
+ *   - Admin page uses m_get_events_data()
+ *
+ * Previously, both were using the same cache key/group, which caused the admin page
+ * to sometimes receive incorrectly structured (or empty) event data — resulting in
+ * missing event types in the dropdown.
+ *
+ * To avoid cache contamination between user and management views, we bypass the
+ * shared cache here and always fetch fresh event data for the admin page.
+ *
+ * If caching is reintroduced in the future, it MUST use a separate cache key/group
+ * specifically for management event data.
+ */
 function management_query() {
     $mScheduleData = wp_cache_get(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
@@ -155,17 +174,13 @@ function management_query() {
     }
     [$mSubjects, $mCourses, $users, $mSchedule] = $mScheduleData;
 
-    $eventsData = wp_cache_get(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
-    if ($eventsData === false) {
-        $eventsObj = events_db_query();
-        $eventsData = m_get_events_data($eventsObj);
-        wp_cache_set(EVENTS_CACHE_KEY, $eventsData, USER_CACHE_GROUP, HOUR_IN_SECONDS);
-    }
-    [$eventTypes, $mEvents] = $eventsData;
+    // Do not reuse the public events cache here.
+    // Admin needs the management event structure from m_get_events_data().
+    $eventsObj = events_db_query();
+    [$eventTypes, $mEvents] = m_get_events_data($eventsObj);
 
     return [$mSubjects, $mCourses, $users, $mSchedule, $eventTypes, $mEvents];
 }
-
 
 function m_schedule_db_query() {
     global $wpdb;
@@ -189,6 +204,7 @@ function m_schedule_db_query() {
         FROM courses
     ");
 
+    // Show newest schedules/users first so recently added entries appear at the top in admin UI
     $users = $wpdb->get_results("
         SELECT
             u.ID as user_id,
@@ -202,6 +218,7 @@ function m_schedule_db_query() {
             ON u.ID = um.user_id
            AND um.meta_key IN ('first_name','last_name','wp_capabilities')
         GROUP BY u.ID, u.user_login, u.user_email
+        ORDER BY u.ID DESC
     ");
 
     $schedule = $wpdb->get_results("
@@ -213,6 +230,7 @@ function m_schedule_db_query() {
             start_time,
             end_time
         FROM schedule
+        ORDER BY schedule_id DESC
     ");
 
     return [
@@ -320,12 +338,12 @@ add_action('wp_enqueue_scripts', function() {
     wp_enqueue_script(
         'scripts',
         get_template_directory_uri() . '/js/scripts.js',
-        [], // no dependencies
+        [],
         '1.0',
-        true // load in footer
+        true
     );
 
-    wp_localize_script('sights-script', 'wpApiSettings', [
+    wp_localize_script('scripts', 'wpApiSettings', [
         'nonce' => wp_create_nonce('wp_rest'),
         'root'  => esc_url_raw(rest_url()),
     ]);
@@ -333,6 +351,14 @@ add_action('wp_enqueue_scripts', function() {
 
 
 // Schedule REST API
+
+// WordPress REST API passes 3 arguments (value, request, param name) to validate_callback.
+// Built-in functions like is_numeric() only accept 1 argument, which causes a fatal error.
+// This wrapper ensures compatibility by accepting all 3 params and validating the value.
+function validate_numeric_param($param, $request, $key) {
+    return is_numeric($param);
+}
+
 add_action('rest_api_init', function() {
     register_rest_route('asc-tutoring/v1', '/schedule', [
     'methods'             => 'POST',
@@ -343,12 +369,12 @@ add_action('rest_api_init', function() {
     'args' => [
         'user_id' => [
             'required'          => true,
-            'validate_callback' => 'is_numeric',
+            'validate_callback' => 'validate_numeric_param',
             'sanitize_callback' => 'absint'
         ],
         'course_id' => [
             'required'          => true,
-            'validate_callback' => 'is_numeric',
+            'validate_callback' => 'validate_numeric_param',
             'sanitize_callback' => 'absint'
         ],
         'day_of_week' => [
@@ -391,7 +417,7 @@ add_action('rest_api_init', function() {
         'args' => [
             'schedule_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
         ],
@@ -406,17 +432,17 @@ add_action('rest_api_init', function() {
         'args' => [
             'schedule_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint',
             ],
             'user_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint',
             ],
             'course_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint',
             ],
             'day_of_week' => [
@@ -453,6 +479,15 @@ add_action('rest_api_init', function() {
 
 
 // Events REST API
+
+/*
+ * Event API notes:
+ * - final_day and duration are nullable in the DB schema, so the REST layer must allow blank values too
+ * - duration must accept either a number or an empty value
+ * - create/update handlers must use the real field names: event_type and duration
+ * - delete_event() should return event_id, not schedule_id
+ */
+
 add_action('rest_api_init', function() {
     register_rest_route('asc-tutoring/v1', '/events', [
         'methods'             => 'POST',
@@ -463,12 +498,12 @@ add_action('rest_api_init', function() {
         'args' => [
             'event_type' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
             'user_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
             'start_day' => [
@@ -478,13 +513,17 @@ add_action('rest_api_init', function() {
             'final_day' => [
                 'required'          => false,
                 'sanitize_callback' => 'sanitize_date_field',
-                'defualt'           => 'null'
+                'default'           => null
             ],
             'duration' => [
                 'required'          => false,
-                'validate_callback' => 'is_numeric',
-                'sanitize_callback' => 'absint',
-                'defualt'           => 'null'
+                'validate_callback' => function($param, $request, $key) {
+                    return $param === null || $param === '' || is_numeric($param);
+                },
+                'sanitize_callback' => function($value) {
+                    return ($value === null || $value === '') ? null : absint($value);
+                },
+                'default'           => null
             ],
         ],
     ]);
@@ -498,7 +537,7 @@ add_action('rest_api_init', function() {
         'args' => [
             'event_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
         ],
@@ -513,17 +552,17 @@ add_action('rest_api_init', function() {
         'args' => [
             'event_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint',
             ],
             'event_type' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
             'user_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
             'start_day' => [
@@ -531,20 +570,43 @@ add_action('rest_api_init', function() {
                 'sanitize_callback' => 'sanitize_date_field',
             ],
             'final_day' => [
-                'required'          => true,
+                'required'          => false,
                 'sanitize_callback' => 'sanitize_date_field',
+                'default'           => null
             ],
             'duration' => [
-                'required'          => true,
-                'validate_callback' => 'is_numeric',
-                'sanitize_callback' => 'absint'
+                'required'          => false,
+                'validate_callback' => function($param, $request, $key) {
+                    return $param === null || $param === '' || is_numeric($param);
+                },
+                'sanitize_callback' => function($value) {
+                    return ($value === null || $value === '') ? null : absint($value);
+                },
+                'default'           => null
             ],
         ],
     ]);
 });
 
 
+// wp_delete_user() is defined in wp-admin/includes/user.php and may not be loaded
+// during frontend/theme REST callbacks, so load it explicitly before account deletion.
+
+if (!function_exists('wp_delete_user')) {
+    require_once ABSPATH . 'wp-admin/includes/user.php';
+}
+
 // Accounts REST API
+/*
+ * Account API notes:
+ * - user_id validators must use validate_numeric_param(), not raw is_numeric(),
+ *   because WordPress passes 3 args to validate_callback
+ * - roles is submitted as an array from the admin UI, so it should be validated
+ *   as an array and sanitized inside the handler, not with sanitize_text_field
+ * - delete_account() needs global $wpdb for its transaction calls
+ * - delete_account() should return user_id, not an undefined account_id variable
+ */
+
 add_action('rest_api_init', function() {
     register_rest_route('asc-tutoring/v1', '/accounts', [
         'methods'             => 'POST',
@@ -556,10 +618,12 @@ add_action('rest_api_init', function() {
             'user_login' => [
                 'required'          => true,
                 'validate_callback' => 'is_umbc_id',
+                'sanitize_callback' => 'sanitize_text_field',
             ],
             'user_email' => [
                 'required'          => true,
                 'validate_callback' => 'is_email',
+                'sanitize_callback' => 'sanitize_email',
             ],
             'first_name' => [
                 'required'          => true,
@@ -571,7 +635,7 @@ add_action('rest_api_init', function() {
             ],
             'roles' => [
                 'required'          => true,
-                'sanitize_callback' => 'sanitize_text_field'
+                'validate_callback' => 'validate_roles',
             ],
         ],
     ]);
@@ -585,7 +649,7 @@ add_action('rest_api_init', function() {
         'args' => [
             'user_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
         ],
@@ -596,11 +660,11 @@ add_action('rest_api_init', function() {
         'callback'            => 'update_account',
         'permission_callback' => function() {
             return current_user_can('admin_control');
-    },
+        },
         'args' => [
             'user_id' => [
                 'required'          => true,
-                'validate_callback' => 'is_numeric',
+                'validate_callback' => 'validate_numeric_param',
                 'sanitize_callback' => 'absint'
             ],
             'roles' => [
@@ -613,11 +677,23 @@ add_action('rest_api_init', function() {
 
 
 function sanitize_time_field($timeStr) {
+    if ($timeStr === null || $timeStr === '') {
+        return false;
+    }
+
+    $timeStr = trim($timeStr);
+
     if (strtolower($timeStr) === 'noon') {
         return '12:00:00';
     }
 
-    $time = DateTime::createFromFormat('g:i a', str_replace('.', '', strtolower($timeStr)));
+    $time = DateTime::createFromFormat('H:i:s', $timeStr);
+    if ($time !== false) {
+        return $time->format('H:i:s');
+    }
+
+    $normalized = str_replace('.', '', strtolower($timeStr));
+    $time = DateTime::createFromFormat('g:i a', $normalized);
 
     if ($time === false) {
         return false;
@@ -643,14 +719,16 @@ function sanitize_day_field($day) {
 
 
 function sanitize_date_field($date) {
-    if ($date == "null") {
+    if ($date === null || $date === '' || strtolower((string)$date) === 'null') {
         return null;
     }
+
     $date = DateTime::createFromFormat('Y-m-d', $date);
 
     if ($date === false) {
         return false;
     }
+
     return $date->format('Y-m-d');
 }
 
@@ -667,6 +745,10 @@ function is_umbc_id($id) {
 }
 
 function validate_roles($roles) {
+    if (!is_array($roles)) {
+        return false;
+    }
+
     $valid_roles = ['tutor', 'asc_staff', 'asc_admin'];
 
     if (count($roles) < 1 || count($roles) > 2) {
@@ -674,12 +756,12 @@ function validate_roles($roles) {
     }
 
     foreach ($roles as $role) {
-        if (!in_array($role, $valid_roles)) {
+        if (!in_array($role, $valid_roles, true)) {
             return false;
         }
     }
 
-    if (in_array('asc_staff', $roles) && in_array('asc_admin', $roles)) {
+    if (in_array('asc_staff', $roles, true) && in_array('asc_admin', $roles, true)) {
         return false;
     }
 
@@ -1022,11 +1104,12 @@ function update_schedule(WP_REST_Request $request) {
 
 function create_event(WP_REST_Request $request) {
     global $wpdb;
+
     $event_type = $request->get_param('event_type');
-    $user_id = $request->get_param('user_id');
-    $start_day = $request->get_param('start_day');
-    $final_day = $request->get_param('final_day');
-    $duration = $request->get_param('$duration');
+    $user_id    = $request->get_param('user_id');
+    $start_day  = $request->get_param('start_day');
+    $final_day  = $request->get_param('final_day');
+    $duration   = $request->get_param('duration');
 
     if ($start_day === false || $start_day === null) {
         return new WP_Error('invalid_start_day', 'Invalid start day', ['status' => 400]);
@@ -1036,18 +1119,18 @@ function create_event(WP_REST_Request $request) {
         return new WP_Error('invalid_final_day', 'Invalid final day', ['status' => 400]);
     }
 
-    if ($duration == "null") {
+    if ($duration === '' || $duration === 'null') {
         $duration = null;
     }
 
     $result = $wpdb->insert(
         'events',
         [
-            '$event_type' => $event_type,
-            'user_id'     => $user_id,
-            'start_day'   => $start_day,
-            'final_day' => $final_day,
-            'duration'  => $duration
+            'event_type' => $event_type,
+            'user_id'    => $user_id,
+            'start_day'  => $start_day,
+            'final_day'  => $final_day,
+            'duration'   => $duration
         ],
         ['%d', '%d', '%s', '%s', '%d']
     );
@@ -1082,18 +1165,19 @@ function delete_event(WP_REST_Request $request) {
     
     wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
 
-    return rest_ensure_response(['deleted' => true, 'event_id' => $schedule_id]);
+    return rest_ensure_response(['deleted' => true, 'event_id' => $event_id]);
 }
 
 
 function update_event(WP_REST_Request $request) {
     global $wpdb;
-    $event_id = $request->get_param('event_id');
-    $event_type = $request->get_param('event_type');
-    $user_id = $request->get_param('user_id');
-    $start_day = $request->get_param('start_day');
-    $final_day = $request->get_param('final_day');
-    $duration = $request->get_param('$duration');
+
+    $event_id    = $request->get_param('event_id');
+    $event_type  = $request->get_param('event_type');
+    $user_id     = $request->get_param('user_id');
+    $start_day   = $request->get_param('start_day');
+    $final_day   = $request->get_param('final_day');
+    $duration    = $request->get_param('duration');
 
     if ($start_day === false || $start_day === null) {
         return new WP_Error('invalid_start_day', 'Invalid start day', ['status' => 400]);
@@ -1103,30 +1187,26 @@ function update_event(WP_REST_Request $request) {
         return new WP_Error('invalid_final_day', 'Invalid final day', ['status' => 400]);
     }
 
-    if ($duration == "null") {
+    if ($duration === '' || $duration === 'null') {
         $duration = null;
     }
 
     $result = $wpdb->update(
         'events',
         [
-            '$event_type' => $event_type,
-            'user_id'     => $user_id,
-            'start_day'   => $start_day,
-            'final_day' => $final_day,
-            'duration'  => $duration
+            'event_type' => $event_type,
+            'user_id'    => $user_id,
+            'start_day'  => $start_day,
+            'final_day'  => $final_day,
+            'duration'   => $duration
         ],
         ['event_id' => $event_id],
-        ['%d', '%d', '%s', '%s', '%s'],
+        ['%d', '%d', '%s', '%s', '%d'],
         ['%d']
     );
 
     if ($result === false) {
         return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
-    }
-
-    if ($result === 0) {
-        return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
     }
 
     wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
@@ -1136,26 +1216,32 @@ function update_event(WP_REST_Request $request) {
 
 
 function create_account(WP_REST_Request $request) {
-    global $wpdb;
     $user_login = $request->get_param('user_login');
     $user_email = $request->get_param('user_email');
     $first_name = $request->get_param('first_name');
     $last_name  = $request->get_param('last_name');
     $roles      = $request->get_param('roles');
 
+    if (!is_array($roles) || count($roles) < 1) {
+        return new WP_Error('invalid_roles', 'At least one valid role is required.', ['status' => 400]);
+    }
+
+    $roles = array_map('sanitize_text_field', $roles);
+
     $user_id = wp_insert_user([
-        "user_login" => $user_login,
-        "user_email" => $user_email,
-        "first_name" => $first_name,
-        "last_name"  => $last_name,
-        "user_pass"  => wp_generate_password(64),
-        "role"       => $roles[0]
+        'user_login' => $user_login,
+        'user_email' => $user_email,
+        'first_name' => $first_name,
+        'last_name'  => $last_name,
+        'user_pass'  => wp_generate_password(64),
+        'role'       => $roles[0]
     ]);
 
     if (is_wp_error($user_id)) {
         return new WP_Error('db_error', $user_id->get_error_message(), ['status' => 500]);
     }
-    if (count($roles) == 2) {
+
+    if (count($roles) === 2) {
         $user = new WP_User($user_id);
         $user->add_role($roles[1]);
     }
@@ -1167,6 +1253,8 @@ function create_account(WP_REST_Request $request) {
 
 
 function delete_account(WP_REST_Request $request) {
+    global $wpdb;
+
     $user_id = $request->get_param('user_id');
     $curr_user_id = get_current_user_id();
 
@@ -1176,13 +1264,18 @@ function delete_account(WP_REST_Request $request) {
 
     $is_tutor = false;
     $user = new WP_User($user_id);
+
+    if (!$user->exists()) {
+        return new WP_Error('not_found', 'No user found with that ID', ['status' => 404]);
+    }
+
     if (in_array('tutor', $user->roles)) {
         $is_tutor = true;
     }
 
     $wpdb->query('START TRANSACTION');
-    $cleaned = clean_up_user($user_id);
 
+    $cleaned = clean_up_user($user_id);
     if (is_wp_error($cleaned)) {
         $wpdb->query('ROLLBACK');
         return $cleaned;
@@ -1201,9 +1294,10 @@ function delete_account(WP_REST_Request $request) {
         wp_cache_delete(EVENTS_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
     }
+
     wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-    return rest_ensure_response(['deleted' => true, 'account_id' => $account_id]);
+    return rest_ensure_response(['deleted' => true, 'user_id' => $user_id]);
 }
 
 
