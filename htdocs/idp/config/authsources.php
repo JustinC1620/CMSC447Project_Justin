@@ -79,6 +79,19 @@ $config = [
     ],
     */
 
+    'umbc-sql' => [
+        'sqlauth:SQL',
+
+        'dsn' => 'mysql:host=localhost;dbname=umbc_db;charset=utf8mb4',
+        'username' => 'root',
+        'password' => '',
+
+        'query' => 'SELECT umbc_id, first_name, last_name, umbc_email
+            FROM umbc_accounts
+            WHERE (umbc_email = :username OR umbc_id = :username)
+            AND pword_hash = SHA2(:password, 256)',
+    ],
+
     /*
     'example-static' => [
         'exampleauth:StaticSource',
@@ -88,6 +101,7 @@ $config = [
     ],
     */
 
+    /*
     'example-userpass' => [
         'exampleauth:UserPass',
 
@@ -107,6 +121,7 @@ $config = [
             ],
         ],
     ],
+    */
 
     /*
     'crypto-hash' => [

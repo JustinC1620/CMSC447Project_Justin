@@ -95,7 +95,7 @@
         "simplesamlphp/simplesamlphp-module-ldap": "~2.4.10",
         "simplesamlphp/simplesamlphp-module-metarefresh": "~1.2.5",
         "simplesamlphp/simplesamlphp-module-radius": "~2.0.3",
-        "simplesamlphp/simplesamlphp-module-sqlauth": "~1.3.1"
+        "simplesamlphp/simplesamlphp-module-sqlauth": "1.3.0"
     },
     "require-dev": {
         "ext-curl": "*",
