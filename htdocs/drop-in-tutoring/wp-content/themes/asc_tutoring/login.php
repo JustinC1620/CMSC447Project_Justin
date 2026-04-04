@@ -129,13 +129,11 @@ Template Name: Login Page
         width: 230px;
         border-radius: 4px;
         line-height: 24px;
-        /* text-align: center; */
         background-color: #fff;
         border: 1px solid #ddd;
         color: #000;
         text-decoration: none;
         font-size: 16px;
-        /* vertical-align: middle; */
         padding: 8px 8px;
         font-weight: bold;
         height: 24px;
@@ -189,6 +187,51 @@ Template Name: Login Page
       #dialog-container {
         margin: auto;
       }
+
+      /* Logout button styles */
+      .button--negative {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        background-color: #c0392b;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 12px 16px;
+        font-size: 16px;
+        font-weight: bold;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+      .button--negative:hover {
+        background-color: #a93226;
+        color: #fff;
+      }
+      .button__icon {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .button__icon svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+      .button__label {
+        display: block;
+      }
+      #logged-in-section {
+        padding: 12px 0;
+      }
+      #logged-in-section p {
+        margin: 0 0 12px 0;
+        color: #444;
+        font-size: 14px;
+      }
     </style>
   </head>
 
@@ -200,27 +243,53 @@ Template Name: Login Page
       <div class="section html-content" id="login-dialog">
         <div id="login-forms">
 
-          <div class="login-form-selection" id="login-form-myumbc">
-            <h2>myUMBC Account</h2>
+          <?php if ( is_user_logged_in() ) : ?>
 
-            <p>
-              UMBC Students, Faculty, and Staff
-            </p>
+            <div class="login-form-selection" id="logged-in-section">
+              <h2>myUMBC Account</h2>
+              <p>You are already logged in<?php
+                $current_user = wp_get_current_user();
+                if ( $current_user->display_name ) {
+                  echo ' as <strong>' . esc_html( $current_user->display_name ) . '</strong>';
+                }
+              ?>.</p>
+              <a class="button button--negative button--full"
+                 href="<?php echo esc_url(wp_login_url() . '?action=wp-saml-auth-logout'); ?>">
+                <div class="button__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M14.08 15.59 16.67 13H7v-2h9.67l-2.59-2.59L15.5 7l5 5-5 5-1.42-1.41ZM19 3c1.10457 0 2 .89543 2 2v4.67l-2-2V5H5v14h14v-2.67l2-2V19c0 1.10457-.89543 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.11.89-2 2-2h14Z"></path>
+                  </svg>
+                </div>
+                <div class="button__label">Log Out</div>
+              </a>
+            </div>
 
-            <p class="service" id="login-umbc"><a href="<?php echo esc_url(wp_login_url() . '?action=wp-saml-auth'); ?>"><img alt="Log In with UMBC" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-umbc-0a7c460c.png" /><span class="label">Log In with UMBC</span></a></p>
-          </div>
+          <?php else : ?>
 
-          <div class="login-form-selection" id="login-form-other">
-            <h2>Guest Access</h2>
+            <div class="login-form-selection" id="login-form-myumbc">
+              <h2>myUMBC Account</h2>
 
-            <p>Special guests that have been granted access</p>
+              <p>
+                UMBC Students, Faculty, and Staff
+              </p>
 
-            <p class="service" id="login-google"><a href="/login/google?url=https%3A%2F%2Fmy.umbc.edu%2F"><img alt="Log In with Google" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-google-ee49770f.png" /> <span class="label">Log In with Google</span></a></p>
+              <p class="service" id="login-umbc"><a href="<?php echo esc_url(wp_login_url() . '?action=wp-saml-auth'); ?>"><img alt="Log In with UMBC" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-umbc-0a7c460c.png" /><span class="label">Log In with UMBC</span></a></p>
+            </div>
 
-            <p class="service" id="login-microsoft"><a href="/login/microsoft?url=https%3A%2F%2Fmy.umbc.edu%2F"><img alt="Log In with Microsoft" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-microsoft-1f6a4cfb.png" /> <span class="label">Log In with Microsoft</span></a></p>
+            <div class="login-form-selection" id="login-form-other">
+              <h2>Guest Access</h2>
 
-            <p class="service" id="login-amazon"><a href="/login/amazon?url=https%3A%2F%2Fmy.umbc.edu%2F"><img alt="Log In with Amazon" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-amazon-c3c04e73.png" /> <span class="label">Log In with Amazon</span></a></p>
-          </div>
+              <p>Special guests that have been granted access</p>
+
+              <p class="service" id="login-google"><a href="/login/google?url=https%3A%2F%2Fmy.umbc.edu%2F"><img alt="Log In with Google" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-google-ee49770f.png" /> <span class="label">Log In with Google</span></a></p>
+
+              <p class="service" id="login-microsoft"><a href="/login/microsoft?url=https%3A%2F%2Fmy.umbc.edu%2F"><img alt="Log In with Microsoft" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-microsoft-1f6a4cfb.png" /> <span class="label">Log In with Microsoft</span></a></p>
+
+              <p class="service" id="login-amazon"><a href="/login/amazon?url=https%3A%2F%2Fmy.umbc.edu%2F"><img alt="Log In with Amazon" height="24" width="24" src="https://d3uyg54qwz4w8h.cloudfront.net/assets/my4/login-amazon-c3c04e73.png" /> <span class="label">Log In with Amazon</span></a></p>
+            </div>
+
+          <?php endif; ?>
+
         </div>
 
         <div id="footer-text">Usage of UMBC computing resources is governed by the <a href="http://www.umbc.edu/policies/pdfs/x-1.00.01%20responsible%20computing%20policy.pdf">UMBC Policy for Responsible Computing</a>.</div>

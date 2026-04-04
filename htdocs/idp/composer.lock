@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "65ddd7900befd245f289a3ecb7fab6cb",
+    "content-hash": "075f6364f242e9a7f6ad89caeeb84813",
     "packages": [
         {
             "name": "dapphp/radius",
@@ -1740,16 +1740,16 @@
         },
         {
             "name": "simplesamlphp/simplesamlphp-module-sqlauth",
-            "version": "v1.3.1",
+            "version": "v1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/simplesamlphp/simplesamlphp-module-sqlauth.git",
-                "reference": "7a3c0fe52aa07663b2ec5be97cb41bd272b25357"
+                "reference": "6dcf569568d55b3f5d6487c0ca65f53d3d8c3d88"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/simplesamlphp/simplesamlphp-module-sqlauth/zipball/7a3c0fe52aa07663b2ec5be97cb41bd272b25357",
-                "reference": "7a3c0fe52aa07663b2ec5be97cb41bd272b25357",
+                "url": "https://api.github.com/repos/simplesamlphp/simplesamlphp-module-sqlauth/zipball/6dcf569568d55b3f5d6487c0ca65f53d3d8c3d88",
+                "reference": "6dcf569568d55b3f5d6487c0ca65f53d3d8c3d88",
                 "shasum": ""
             },
             "require": {
@@ -1787,7 +1787,7 @@
                 "issues": "https://github.com/simplesamlphp/simplesamlphp-module-sqlauth/issues",
                 "source": "https://github.com/simplesamlphp/simplesamlphp-module-sqlauth"
             },
-            "time": "2024-07-15T21:53:13+00:00"
+            "time": "2024-04-18T06:56:44+00:00"
         },
         {
             "name": "simplesamlphp/xml-common",

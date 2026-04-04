@@ -572,10 +572,10 @@ $config = [
      */
 
     'module.enable' => [
-        'exampleauth' => true,
         'core' => true,
         'admin' => true,
         'saml' => true,
+        'sqlauth' => true,
         'umbc_login' => true,
     ],
 

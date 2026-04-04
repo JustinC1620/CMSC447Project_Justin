@@ -32,6 +32,9 @@ if (!function_exists('wp_delete_user')) {
         ]);
     });
 
+
+    // Supposed to prevent seeing "User Does not have Account Message"
+    // Currently makes it that you can't log in ):
     /*
     add_action('init', function () {
 
@@ -54,6 +57,16 @@ if (!function_exists('wp_delete_user')) {
         }
     });
     */
+
+    add_filter('login_redirect', function($redirect_to, $request, $user) {
+        return home_url();
+    }, 10, 3);
+
+    add_action('wp_logout', function() {
+        wp_redirect( home_url() );
+        exit;
+    }, 10);
+
     function db_connect_root($dbName) {
         $host = "localhost";
         $username = "root";
