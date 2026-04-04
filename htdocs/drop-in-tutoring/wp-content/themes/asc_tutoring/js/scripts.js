@@ -828,17 +828,8 @@ document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
       user_id: Number(document.getElementById('schedule_user_id').value),
       course_id: Number(document.getElementById('schedule_course_id').value),
       day_of_week: document.getElementById('schedule_day_of_week').value,
-<<<<<<< Updated upstream
-      start_time: document.getElementById('schedule_start_time').value,
-      end_time: document.getElementById('schedule_end_time').value,
-      course_subject: document.getElementById('course_subject').value,
-      subject_name: document.getElementById('subject_name').value,
-      course_code: document.getElementById('course_code').value,
-      course_name: document.getElementById('course_name').value
-=======
       start_time: startTime,
       end_time: endTime,
->>>>>>> Stashed changes
     };
 
     try {
@@ -1070,9 +1061,6 @@ document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
       showMessage(err.message, 'error');
     }
   });
-<<<<<<< Updated upstream
-});
-=======
 });
 
 function toggleFields() {
@@ -1106,4 +1094,3 @@ document.addEventListener("DOMContentLoaded", function () {
   // run once on load
   toggleFields();
 });
->>>>>>> Stashed changes
