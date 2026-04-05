@@ -452,6 +452,18 @@ foreach ($eventTypes as $eventType) {
   vertical-align: top;
 }
 
+.entry-content .admin-table td:last-child,
+.entry-content .umbc-table thead th:last-child {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+#schedule-table td:nth-child(4),
+#schedule-table td:nth-child(5) {
+  white-space: nowrap;
+}
+
 .tutoring-admin-message {
   margin-bottom: 1rem;
   padding: 12px 16px;

@@ -886,7 +886,6 @@ document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
       const row = e.target.closest('tr');
       const id = row.dataset.eventId;
       if (!confirm(`Delete event ${id}?`)) return;
-
       try {
         await requestJson(`/events/${id}`, 'DELETE');
         row.remove();
@@ -967,7 +966,7 @@ document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
       const row = e.target.closest('tr');
       const id = row.dataset.userId;
       if (!confirm(`Delete user ${id}?`)) return;
-
+      console.log(row);
       try {
         await requestJson(`/accounts/${id}`, 'DELETE');
         row.remove();

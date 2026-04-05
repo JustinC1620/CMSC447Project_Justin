@@ -10,63 +10,62 @@ const M_SCHEDULE_CACHE_KEY   = "management_schedule";
 const M_EVENTS_CACHE_KEY     = "management_events";
 const MANAGEMENT_CACHE_GROUP = "management_group";
 
-if (!function_exists('wp_delete_user')) {
-    require_once ABSPATH . 'wp-admin/includes/user.php';
+const TUTOR_ROLE = "tutor";
+const STAFF_ROLE = "asc_staff";
+const ADMIN_ROLE = "asc_admin";
+
+const DAYS_OF_WEEK = [
+    "MON" => "Monday",
+    "TUE" => "Tuesday",
+    "WED" => "Wednesday",
+    "THU" => "Thursday",
+    "FRI" => "Friday",
+];
+
+if (!function_exists("wp_delete_user")) {
+    require_once ABSPATH . "wp-admin/includes/user.php";
 }
 
 // Utility Functions
 //---------------------------------------------------------------------------------------------------------------------
 {
-    add_action('wp_enqueue_scripts', function() {
+    add_action("wp_enqueue_scripts", function() {
         wp_enqueue_script(
-            'scripts',
-            get_template_directory_uri() . '/js/scripts.js',
+            "scripts",
+            get_template_directory_uri() . "/js/scripts.js",
             [],
-            '1.0',
+            "1.0",
             true
         );
 
-        wp_localize_script('scripts', 'wpApiSettings', [
-            'nonce' => wp_create_nonce('wp_rest'),
-            'root'  => esc_url_raw(rest_url()),
+        wp_localize_script("scripts", "wpApiSettings", [
+            "nonce" => wp_create_nonce("wp_rest"),
+            "root"  => esc_url_raw(rest_url()),
         ]);
     });
 
-
-    // Supposed to prevent seeing "User Does not have Account Message"
-    // Currently makes it that you can't log in ):
-    /*
-    add_action('init', function () {
-
-        // Only run on wp-login.php
-        if (strpos($_SERVER['REQUEST_URI'], 'wp-login.php') === false) {
-            return;
-        }
-
-        // If this is NOT a normal login form submission
-        // and user is not logged in → likely SAML failure
-        if (!is_user_logged_in() && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-
-            // Optional: avoid infinite loop
-            if (isset($_GET['redirected_from_saml'])) {
-                return;
-            }
-
-            wp_redirect(home_url());
+    add_action("login_init", function() {
+        if (isset( $_GET["SAMLResponse"]) ) {
+            wp_redirect( home_url() );
             exit;
         }
     });
-    */
 
-    add_filter('login_redirect', function($redirect_to, $request, $user) {
+    add_action( "after_setup_theme", function() {
+        if (current_user_can(TUTOR_ROLE) ||
+            current_user_can(ADMIN_ROLE) ||
+            current_user_can(STAFF_ROLE)) {
+            show_admin_bar( false );
+        }
+    });
+
+    add_filter("login_redirect", function($redirect_to, $request, $user) {
         return home_url();
     }, 10, 3);
+    
 
-    add_action('wp_logout', function() {
-        wp_redirect( home_url() );
-        exit;
-    }, 10);
-
+    // NEED TO REPLACE
+    // Should not use root for database connections
     function db_connect_root($dbName) {
         $host = "localhost";
         $username = "root";
@@ -81,55 +80,206 @@ if (!function_exists('wp_delete_user')) {
         return $pdo;
     }
 
-    function tutoring_day_label($day) {
-        $map = [
-            'MON' => 'Monday',
-            'TUE' => 'Tuesday',
-            'WED' => 'Wednesday',
-            'THU' => 'Thursday',
-            'FRI' => 'Friday',
-        ];
-        return $map[$day] ?? $day;
+    function tutoring_day_label($abbr_day) {
+        return DAYS_OF_WEEK[$abbr_day] ?? $abbr_day;
+    }
+
+    function get_day_abbr($full_day) {
+        return array_search(ucwords(strtolower($full_day)), DAYS_OF_WEEK) ?: null;
     }
 
     function tutoring_format_time($time) {
-    $formatted = str_replace(['am', 'pm'], ['a.m.', 'p.m.'], 
-                             DateTime::createFromFormat('H:i:s', $time)->format('g:i a'));
-    $formatted = str_replace(['12:00 p.m.', '12:00 a.m.'], ['Noon', 'Midnight'], strtolower($formatted));
+    $formatted = str_replace(["am", "pm"], ["a.m.", "p.m."], 
+                             DateTime::createFromFormat("H:i:s", $time)->format("g:i a"));
+    $formatted = str_replace(["12:00 p.m.", "12:00 a.m."], ["Noon", "Midnight"], strtolower($formatted));
     return $formatted;
     }
 
     function tutoring_admin_time_label($time) {
         if (!$time) {
-            return '';
+            return "";
         }
         return tutoring_format_time($time);
     }
 
     function tutoring_anchor_from_subject($subject) {
-        return strtolower($subject['subject_code']);
+        return strtolower($subject["subject_code"]);
     }
 
     function tutoring_subject_heading($subject) {
-        return esc_html($subject['subject_name']) . ' Courses';
+        return esc_html($subject["subject_name"]) . " Courses";
     }
 
     function tutoring_admin_user_label($user) {
-        $name = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        if ($name === '') {
-            $name = $user['user_login'];
+        $name = trim(($user["first_name"] ?? "") . " " . ($user["last_name"] ?? ""));
+        if ($name === "") {
+            $name = $user["user_login"];
         }
-        return $name . ' (' . $user['user_login'] . ')';
+        return $name . " (" . $user["user_login"] . ")";
     }   
 
     function display_snake_case($snake_case_str) {
-        return ucwords(str_replace('_', ' ', $snake_case_str));
+        return ucwords(str_replace("_", " ", $snake_case_str));
     }
 
     function display_roles($roles) {
-        return display_snake_case(str_replace("asc", "ASC", implode(", ", $roles)) ?? '—');
+        return display_snake_case(str_replace("asc", "ASC", implode(", ", $roles)) ?? "—");
     }
 
+    function flush_cache() {
+        wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
+        wp_cache_delete(U_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+
+        wp_cache_delete(M_SUBJECTS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+        wp_cache_delete(M_COURSES_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+        wp_cache_delete(M_USERS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+        wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+        wp_cache_delete(M_EVENTS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+        return;
+    }
+
+    function tutoring_get_tutor_status($user_id, $day_of_week, $start_time, $end_time, $event_types, $u_events) {
+        $now       = new DateTime('now', new DateTimeZone('America/New_York'));
+        $curr_day  = $now->format('Y-m-d');
+        $curr_time = $now->format('H:i:s');
+ 
+        $type_name_map = [];
+        foreach ($event_types as $et) {
+            $type_name_map[$et['event_type_id']] = $et['event_name'];
+        }
+ 
+        $absent_event        = null;
+        $late_event          = null;
+        $leaving_early_event = null;
+        $at_capacity_event   = null;
+ 
+        foreach ($u_events as $ev) {
+            if ((int) $ev['user_id'] !== (int) $user_id) {
+                continue;
+            }
+ 
+            $type_name = $type_name_map[$ev['event_type_id']] ?? '';
+            $start_day = $ev['start_day'];
+            $final_day = $ev['final_day'] ?? $ev['start_day'];
+ 
+            switch ($type_name) {
+                case 'absent':
+                    if ($curr_day >= $start_day && $curr_day <= $final_day) {
+                        $absent_event = $ev;
+                    } elseif ($absent_event === null && $start_day > $curr_day) {
+                        $soon_cutoff = (new DateTime($curr_day))->modify('+7 days')->format('Y-m-d');
+                        if ($start_day <= $soon_cutoff) {
+                            $absent_event = $ev;
+                        }
+                    }
+                    break;
+ 
+                case 'late':
+                    if ($start_day === $curr_day) {
+                        $late_event = $ev;
+                    }
+                    break;
+ 
+                case 'leaving_early':
+                    if ($start_day === $curr_day) {
+                        $leaving_early_event = $ev;
+                    }
+                    break;
+ 
+                case 'at_capacity':
+                    if ($start_day === $curr_day) {
+                        $at_capacity_event = $ev;
+                    }
+                    break;
+            }
+        }
+ 
+        $icon_check    = '<svg aria-hidden="true" focusable="false" style="width:1em;height:1em;vertical-align:middle" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 4.5L6.5 11.5L2.5 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        $icon_x        = '<svg aria-hidden="true" focusable="false" style="width:1em;height:1em;vertical-align:middle" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+        $icon_slash    = '<svg aria-hidden="true" focusable="false" style="width:1em;height:1em;vertical-align:middle" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2"/><path d="M11.5 4.5L4.5 11.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+        $icon_triangle = '<svg aria-hidden="true" focusable="false" style="width:1em;height:1em;vertical-align:middle" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2L14.5 13.5H1.5L8 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><line x1="8" y1="6" x2="8" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="12" r="0.75" fill="currentColor"/></svg>';
+        $icon_pause    = '<svg aria-hidden="true" focusable="false" style="width:1em;height:1em;vertical-align:middle" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/></svg>';
+ 
+        $absent_note = '';
+        if ($absent_event !== null) {
+            $abs_start = $absent_event['start_day'];
+            $abs_final = $absent_event['final_day'] ?? $absent_event['start_day'];
+ 
+            $fmt_start = (new DateTime($abs_start))->format('M j');
+            $fmt_end   = (new DateTime($abs_final))->format('M j');
+            $range     = ($abs_start === $abs_final) ? $fmt_start : "$fmt_start to $fmt_end";
+ 
+            $seven_days_out = (new DateTime($curr_day))->modify('+7 days')->format('Y-m-d');
+ 
+            if ($abs_start <= $seven_days_out ||
+                $curr_day >= $abs_start && $curr_day <= $abs_final) {
+                $absent_note = "Called out on: $range";
+            }
+        }
+ 
+        $leaving_early_note = '';
+        $has_left_early     = false;
+ 
+        if ($leaving_early_event !== null) {
+            $duration = isset($leaving_early_event['duration']) ? (int) $leaving_early_event['duration'] : null;
+ 
+            if ($duration !== null && $duration > 0) {
+                $departure_time = (new DateTime($curr_day . ' ' . $end_time))
+                    ->modify("-{$duration} minutes")
+                    ->format('H:i:s');
+ 
+                if ($curr_time >= $departure_time) {
+                    $has_left_early = true;
+                } else {
+                    $leaving_early_note = "Leaving {$duration} minutes early";
+                }
+            } else {
+                $leaving_early_note = "Leaving early";
+            }
+        }
+ 
+        $curr_day_abbr    = get_day_abbr($now->format('D'));
+        $is_today         = ($curr_day_abbr === $day_of_week);
+        $is_active_window = ($curr_time >= $start_time && $curr_time <= $end_time);
+ 
+        $make = function($label, $color, $icon, $le_note) use ($absent_note, $icon_triangle) {
+            return [
+                'label'              => $label,
+                'color'              => $color,
+                'icon'               => $icon,
+                'leaving_early_note' => $le_note,
+                'leaving_early_icon' => $le_note !== '' ? $icon_triangle : '',
+                'absent_note'        => $absent_note,
+            ];
+        };
+ 
+        if ($absent_event !== null
+            && $curr_day >= $absent_event['start_day']
+            && $curr_day <= ($absent_event['final_day'] ?? $absent_event['start_day'])
+        ) {
+            return $make('Called Out', '#da2128', $icon_x, '');
+        }
+ 
+        if (false || !$is_active_window) {
+            return $make('Unavailable', '#212121', '', '');
+        }
+
+        if ($has_left_early) {
+            return $make('Left Early', '#d83933', $icon_x, '');
+        }
+
+        if ($late_event !== null) {
+            return $make('Running Late', '#e65100', $icon_slash, $leaving_early_note);
+        }
+
+        if ($at_capacity_event !== null) {
+            return $make('At Capacity for Students', '#ffbb1b', $icon_pause, $leaving_early_note);
+        }
+
+        if ($is_active_window) {
+            return $make('Available', '#2e7d32', $icon_check, $leaving_early_note);
+        }
+    }
 }
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -432,9 +582,9 @@ if (!function_exists('wp_delete_user')) {
         $m_subjects = [];    
         foreach ($m_subjects_obj as $row) {
                 $m_subjects[$row->subject_code] = [
-                    'subject_code'  => $row->subject_code,
-                    'subject_name'  => $row->subject_name,
-                    'subject_count' => $row->subject_count
+                    "subject_code"  => $row->subject_code,
+                    "subject_name"  => $row->subject_name,
+                    "subject_count" => $row->subject_count
                 ];
             }
         return array_values($m_subjects);
@@ -445,11 +595,11 @@ if (!function_exists('wp_delete_user')) {
         $m_courses = [];
         foreach ($m_courses_obj as $row) {
             $m_courses[$row->course_id] = [
-                'course_id'      => $row->course_id,
-                'course_code'    => $row->course_code,
-                'course_name'    => $row->course_name,
-                'course_subject' => $row->course_subject,
-                'course_count'   => $row->course_count
+                "course_id"      => $row->course_id,
+                "course_code"    => $row->course_code,
+                "course_name"    => $row->course_name,
+                "course_subject" => $row->course_subject,
+                "course_count"   => $row->course_count
             ];
         }
         return $m_courses;
@@ -468,12 +618,12 @@ if (!function_exists('wp_delete_user')) {
             }
 
             $m_users[$row->user_id] = [
-                    'user_id'    => $row->user_id,
-                    'user_login' => $row->user_login,
-                    'user_email' => $row->user_email,
-                    'first_name' => $row->first_name,
-                    'last_name'  => $row->last_name,
-                    'roles'      => $roles
+                    "user_id"    => $row->user_id,
+                    "user_login" => $row->user_login,
+                    "user_email" => $row->user_email,
+                    "first_name" => $row->first_name,
+                    "last_name"  => $row->last_name,
+                    "roles"      => $roles
             ];
         }
         
@@ -527,119 +677,119 @@ if (!function_exists('wp_delete_user')) {
 //---------------------------------------------------------------------------------------------------------------------
 {
     // Schedule REST API
-    add_action('rest_api_init', function() {
-        register_rest_route('asc-tutoring/v1', '/schedule', [
-        'methods'             => 'POST',
-        'callback'            => 'create_schedule',
-        'permission_callback' => function() {
-            return current_user_can('admin_control');
+    add_action("rest_api_init", function() {
+        register_rest_route("asc-tutoring/v1", "/schedule", [
+        "methods"             => "POST",
+        "callback"            => "create_schedule",
+        "permission_callback" => function() {
+            return current_user_can("admin_control");
         },
-        'args' => [
-            'user_id' => [
-                'required'          => true,
-                'validate_callback' => 'validate_numeric_param',
-                'sanitize_callback' => 'absint'
+        "args" => [
+            "user_id" => [
+                "required"          => true,
+                "validate_callback" => "validate_numeric_param",
+                "sanitize_callback" => "absint"
             ],
-            'course_id' => [
-                'required'          => true,
-                'validate_callback' => 'validate_numeric_param',
-                'sanitize_callback' => 'absint'
+            "course_id" => [
+                "required"          => true,
+                "validate_callback" => "validate_numeric_param",
+                "sanitize_callback" => "absint"
             ],
-            'day_of_week' => [
-                'required'          => true,
-                'sanitize_callback' => 'sanitize_day_field',
+            "day_of_week" => [
+                "required"          => true,
+                "sanitize_callback" => "sanitize_day_field",
             ],
-            'start_time' => [
-                'required'          => true,
-                'sanitize_callback' => 'sanitize_time_field',
+            "start_time" => [
+                "required"          => true,
+                "sanitize_callback" => "sanitize_time_field",
             ],
-            'end_time' => [
-                'required'          => true,
-                'sanitize_callback' => 'sanitize_time_field',
+            "end_time" => [
+                "required"          => true,
+                "sanitize_callback" => "sanitize_time_field",
             ],
-            'course_subject' => [
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_text_field',
+            "course_subject" => [
+                "required"          => false,
+                "sanitize_callback" => "sanitize_text_field",
             ],
-            'subject_name' => [
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_text_field',
+            "subject_name" => [
+                "required"          => false,
+                "sanitize_callback" => "sanitize_text_field",
             ],
-            'course_code' => [
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_text_field',
+            "course_code" => [
+                "required"          => false,
+                "sanitize_callback" => "sanitize_text_field",
             ],
-            'course_name' => [
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_text_field',
+            "course_name" => [
+                "required"          => false,
+                "sanitize_callback" => "sanitize_text_field",
             ],
         ],
     ]);
 
-        register_rest_route('asc-tutoring/v1', '/schedule/(?P<schedule_id>\d+)', [
-            'methods'             => 'DELETE',
-            'callback'            => 'delete_schedule',
-            'permission_callback' => function() {
-                return current_user_can('admin_control');
+        register_rest_route("asc-tutoring/v1", "/schedule/(?P<schedule_id>\d+)", [
+            "methods"             => "DELETE",
+            "callback"            => "delete_schedule",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
             },
-            'args' => [
-                'schedule_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+            "args" => [
+                "schedule_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
             ],
         ]);
 
-        register_rest_route('asc-tutoring/v1', '/schedule/(?P<schedule_id>\d+)', [
-            'methods'             => 'PATCH',
-            'callback'            => 'update_schedule',
-            'permission_callback' => function() {
-                return current_user_can('admin_control');
+        register_rest_route("asc-tutoring/v1", "/schedule/(?P<schedule_id>\d+)", [
+            "methods"             => "PATCH",
+            "callback"            => "update_schedule",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
             },
-            'args' => [
-                'schedule_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint',
+            "args" => [
+                "schedule_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint",
                 ],
-                'user_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint',
+                "user_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint",
                 ],
-                'course_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint',
+                "course_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint",
                 ],
-                'day_of_week' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_day_field',
+                "day_of_week" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_day_field",
                 ],
-                'start_time' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_time_field',
+                "start_time" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_time_field",
                 ],
-                'end_time' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_time_field',
+                "end_time" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_time_field",
                 ],
-                'course_subject' => [
-                    'required'          => false,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "course_subject" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'subject_name' => [
-                    'required'          => false,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "subject_name" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'course_code' => [
-                    'required'          => false,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "course_code" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'course_name' => [
-                    'required'          => false,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "course_name" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
             ],
         ]);
@@ -647,213 +797,190 @@ if (!function_exists('wp_delete_user')) {
 
 
     // Events REST API
-
-    /*
-    * Event API notes:
-    * - final_day and duration are nullable in the DB schema, so the REST layer must allow blank values too
-    * - duration must accept either a number or an empty value
-    * - create/update handlers must use the real field names: event_type and duration
-    * - delete_event() should return event_id, not schedule_id
-    */
-
-    add_action('rest_api_init', function() {
-        register_rest_route('asc-tutoring/v1', '/events', [
-            'methods'             => 'POST',
-            'callback'            => 'create_event',
-            'permission_callback' => function() {
-                return current_user_can('staff_control');
+    add_action("rest_api_init", function() {
+        register_rest_route("asc-tutoring/v1", "/events", [
+            "methods"             => "POST",
+            "callback"            => "create_event",
+            "permission_callback" => function() {
+                return current_user_can("staff_control");
             },
-            'args' => [
-                'event_type' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+            "args" => [
+                "event_type" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
-                'user_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+                "user_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
-                'start_day' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_date_field',
+                "start_day" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_date_field",
                 ],
-                'final_day' => [
-                    'required'          => false,
-                    'sanitize_callback' => 'sanitize_date_field',
-                    'default'           => null
+                "final_day" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_date_field",
+                    "default"           => null
                 ],
-                'duration' => [
-                    'required'          => false,
-                    'validate_callback' => function($param, $request, $key) {
-                        return $param === null || $param === '' || is_numeric($param);
+                "duration" => [
+                    "required"          => false,
+                    "validate_callback" => function($param, $request, $key) {
+                        return $param === null || $param === "" || is_numeric($param);
                     },
-                    'sanitize_callback' => function($value) {
-                        return ($value === null || $value === '') ? null : absint($value);
+                    "sanitize_callback" => function($value) {
+                        return ($value === null || $value === "") ? null : absint($value);
                     },
-                    'default'           => null
+                    "default"           => null
                 ],
             ],
         ]);
 
-        register_rest_route('asc-tutoring/v1', '/events/(?P<event_id>\d+)', [
-            'methods'             => 'DELETE',
-            'callback'            => 'delete_event',
-            'permission_callback' => function() {
-                return current_user_can('staff_control');
+        register_rest_route("asc-tutoring/v1", "/events/(?P<event_id>\d+)", [
+            "methods"             => "DELETE",
+            "callback"            => "delete_event",
+            "permission_callback" => function() {
+                return current_user_can("staff_control");
             },
-            'args' => [
-                'event_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+            "args" => [
+                "event_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
             ],
         ]);
 
-        register_rest_route('asc-tutoring/v1', '/events/(?P<event_id>\d+)', [
-            'methods'             => 'PATCH',
-            'callback'            => 'update_event',
-            'permission_callback' => function() {
-                return current_user_can('staff_control');
+        register_rest_route("asc-tutoring/v1", "/events/(?P<event_id>\d+)", [
+            "methods"             => "PATCH",
+            "callback"            => "update_event",
+            "permission_callback" => function() {
+                return current_user_can("staff_control");
         },
-            'args' => [
-                'event_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint',
+            "args" => [
+                "event_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint",
                 ],
-                'event_type' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+                "event_type" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
-                'user_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+                "user_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
-                'start_day' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_date_field',
+                "start_day" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_date_field",
                 ],
-                'final_day' => [
-                    'required'          => false,
-                    'sanitize_callback' => 'sanitize_date_field',
-                    'default'           => null
+                "final_day" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_date_field",
+                    "default"           => null
                 ],
-                'duration' => [
-                    'required'          => false,
-                    'validate_callback' => function($param, $request, $key) {
-                        return $param === null || $param === '' || is_numeric($param);
+                "duration" => [
+                    "required"          => false,
+                    "validate_callback" => function($param, $request, $key) {
+                        return $param === null || $param === "" || is_numeric($param);
                     },
-                    'sanitize_callback' => function($value) {
-                        return ($value === null || $value === '') ? null : absint($value);
+                    "sanitize_callback" => function($value) {
+                        return ($value === null || $value === "") ? null : absint($value);
                     },
-                    'default'           => null
+                    "default"           => null
                 ],
             ],
         ]);
     });
 
 
-    // wp_delete_user() is defined in wp-admin/includes/user.php and may not be loaded
-    // during frontend/theme REST callbacks, so load it explicitly before account deletion.
-
-
 
     // Accounts REST API
-    /*
-    * Account API notes:
-    * - user_id validators must use validate_numeric_param(), not raw is_numeric(),
-    *   because WordPress passes 3 args to validate_callback
-    * - roles is submitted as an array from the admin UI, so it should be validated
-    *   as an array and sanitized inside the handler, not with sanitize_text_field
-    * - delete_account() needs global $wpdb for its transaction calls
-    * - delete_account() should return user_id, not an undefined account_id variable
-    */
-
-    add_action('rest_api_init', function() {
-        register_rest_route('asc-tutoring/v1', '/accounts', [
-            'methods'             => 'POST',
-            'callback'            => 'create_account',
-            'permission_callback' => function() {
-                return current_user_can('admin_control');
+    add_action("rest_api_init", function() {
+        register_rest_route("asc-tutoring/v1", "/accounts", [
+            "methods"             => "POST",
+            "callback"            => "create_account",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
             },
-            'args' => [
-                'user_login' => [
-                    'required'          => true,
-                    'validate_callback' => 'is_umbc_id',
-                    'sanitize_callback' => 'sanitize_text_field',
+            "args" => [
+                "user_login" => [
+                    "required"          => true,
+                    "validate_callback" => "is_umbc_id",
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'user_email' => [
-                    'required'          => true,
-                    'validate_callback' => 'is_email',
-                    'sanitize_callback' => 'sanitize_email',
+                "user_email" => [
+                    "required"          => true,
+                    "validate_callback" => "is_email",
+                    "sanitize_callback" => "sanitize_email",
                 ],
-                'first_name' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "first_name" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'last_name' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "last_name" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'roles' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_roles',
+                "roles" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_roles",
                 ],
             ],
         ]);
 
-        register_rest_route('asc-tutoring/v1', '/accounts/(?P<user_id>\d+)', [
-            'methods'             => 'DELETE',
-            'callback'            => 'delete_account',
-            'permission_callback' => function() {
-                return current_user_can('admin_control');
+        register_rest_route("asc-tutoring/v1", "/accounts/(?P<user_id>\d+)", [
+            "methods"             => "DELETE",
+            "callback"            => "delete_account",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
             },
-            'args' => [
-                'user_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+            "args" => [
+                "user_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
             ],
         ]);
 
-        register_rest_route('asc-tutoring/v1', '/accounts/(?P<user_id>\d+)', [
-            'methods'             => 'PATCH',
-            'callback'            => 'update_account',
-            'permission_callback' => function() {
-                return current_user_can('admin_control');
+        register_rest_route("asc-tutoring/v1", "/accounts/(?P<user_id>\d+)", [
+            "methods"             => "PATCH",
+            "callback"            => "update_account",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
             },
-            'args' => [
-                'user_id' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_numeric_param',
-                    'sanitize_callback' => 'absint'
+            "args" => [
+                "user_id" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_numeric_param",
+                    "sanitize_callback" => "absint"
                 ],
-                'user_login' => [
-                    'required'          => true,
-                    'validate_callback' => 'is_umbc_id',
-                    'sanitize_callback' => 'sanitize_text_field',
+                "user_login" => [
+                    "required"          => true,
+                    "validate_callback" => "is_umbc_id",
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'user_email' => [
-                    'required'          => true,
-                    'validate_callback' => 'is_email',
-                    'sanitize_callback' => 'sanitize_email',
+                "user_email" => [
+                    "required"          => true,
+                    "validate_callback" => "is_email",
+                    "sanitize_callback" => "sanitize_email",
                 ],
-                'first_name' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "first_name" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'last_name' => [
-                    'required'          => true,
-                    'sanitize_callback' => 'sanitize_text_field',
+                "last_name" => [
+                    "required"          => true,
+                    "sanitize_callback" => "sanitize_text_field",
                 ],
-                'roles' => [
-                    'required'          => true,
-                    'validate_callback' => 'validate_roles'
+                "roles" => [
+                    "required"          => true,
+                    "validate_callback" => "validate_roles"
                 ]
             ],
         ]);
@@ -870,68 +997,58 @@ if (!function_exists('wp_delete_user')) {
     }
 
     function sanitize_time_field($timeStr) {
-        if ($timeStr === null || $timeStr === '') {
+        if ($timeStr === null || $timeStr === "") {
             return false;
         }
 
         $timeStr = trim($timeStr);
 
-        if (strtolower($timeStr) === 'noon') {
-            return '12:00:00';
+        if (strtolower($timeStr) === "noon") {
+            return "12:00:00";
         }
 
-        $time = DateTime::createFromFormat('H:i:s', $timeStr);
+        $time = DateTime::createFromFormat("H:i:s", $timeStr);
         if ($time !== false) {
-            return $time->format('H:i:s');
+            return $time->format("H:i:s");
         }
 
-        $normalized = str_replace('.', '', strtolower($timeStr));
-        $time = DateTime::createFromFormat('g:i a', $normalized);
+        $normalized = str_replace(".", "", strtolower($timeStr));
+        $time = DateTime::createFromFormat("g:i a", $normalized);
 
         if ($time === false) {
             return false;
         }
 
-        return $time->format('H:i:s');
+        return $time->format("H:i:s");
     }
 
 
     function sanitize_day_field($day) {
-        $days = [
-            'Monday'    => 'MON',
-            'Tuesday'   => 'TUE',
-            'Wednesday' => 'WED',
-            'Thursday'  => 'THU',
-            'Friday'    => 'FRI',
-        ];
-
-        $day = ucfirst(strtolower($day));
-
-        return $days[$day] ?? false;
+        return DAYS_OF_WEEK[ucfirst(strtolower($day))] ?? false;
     }
 
 
     function sanitize_date_field($date) {
-        if ($date === null || $date === '' || strtolower((string)$date) === 'null') {
+        if ($date === null || $date === "" || strtolower((string)$date) === "null") {
             return null;
         }
 
-        $date = DateTime::createFromFormat('Y-m-d', $date);
+        $date = DateTime::createFromFormat("Y-m-d", $date);
 
         if ($date === false) {
             return false;
         }
 
-        return $date->format('Y-m-d');
+        return $date->format("Y-m-d");
     }
 
 
     function is_umbc_id($id) {
-        if (!preg_match('/^[A-Z]{2}\d{5}$/', $id)) {
+        if (!preg_match("/^[A-Z]{2}\d{5}$/", $id)) {
             return new WP_Error(
-                'invalid_id',
+                "invalid_id",
                 "$id must be two uppercase letters followed by five digits (e.g. AB12345)",
-                ['status' => 400]
+                ["status" => 400]
             );
         }
         return true;
@@ -942,7 +1059,7 @@ if (!function_exists('wp_delete_user')) {
             return false;
         }
 
-        $valid_roles = ['tutor', 'asc_staff', 'asc_admin'];
+        $valid_roles = [TUTOR_ROLE, STAFF_ROLE, ADMIN_ROLE];
 
         if (count($roles) < 1 || count($roles) > 2) {
             return false;
@@ -954,7 +1071,7 @@ if (!function_exists('wp_delete_user')) {
             }
         }
 
-        if (in_array('asc_staff', $roles, true) && in_array('asc_admin', $roles, true)) {
+        if (in_array(STAFF_ROLE, $roles, true) && in_array(ADMIN_ROLE, $roles, true)) {
             return false;
         }
 
@@ -965,23 +1082,23 @@ if (!function_exists('wp_delete_user')) {
         global $wpdb;
 
         $result = $wpdb->delete(
-            'events',
-            ['user_id' => $user_id],
-            ['%s']
+            "events",
+            ["user_id" => $user_id],
+            ["%s"]
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', 'Failed to delete event', ['status' => 500]);
+            return new WP_Error("db_error", "Failed to delete event", ["status" => 500]);
         }
 
         $result = $wpdb->delete(
-            'schedule',
-            ['user_id' => $user_id],
-            ['%s']
+            "schedule",
+            ["user_id" => $user_id],
+            ["%s"]
         );
 
         if ($result === false) {
-            return new WP_Error('db_error', 'Failed to delete schedule', ['status' => 500]);
+            return new WP_Error("db_error", "Failed to delete schedule", ["status" => 500]);
         }
     }
 }
@@ -993,23 +1110,23 @@ if (!function_exists('wp_delete_user')) {
 {
     function create_schedule(WP_REST_Request $request) {
         global $wpdb;
-        $user_id     = $request->get_param('user_id');
-        $course_id   = $request->get_param('course_id');
-        $day_of_week = $request->get_param('day_of_week');
-        $start_time  = $request->get_param('start_time');
-        $end_time    = $request->get_param('end_time');
+        $user_id     = $request->get_param("user_id");
+        $course_id   = $request->get_param("course_id");
+        $day_of_week = $request->get_param("day_of_week");
+        $start_time  = $request->get_param("start_time");
+        $end_time    = $request->get_param("end_time");
 
         if ($day_of_week === false) {
-            return new WP_Error('invalid_day', 'Invalid day of week', ['status' => 400]);
+            return new WP_Error("invalid_day", "Invalid day of week", ["status" => 400]);
         }
         if ($start_time === false) {
-            return new WP_Error('invalid_start_time', 'Invalid start time format', ['status' => 400]);
+            return new WP_Error("invalid_start_time", "Invalid start time format", ["status" => 400]);
         }
         if ($end_time === false) {
-            return new WP_Error('invalid_end_time', 'Invalid end time format', ['status' => 400]);
+            return new WP_Error("invalid_end_time", "Invalid end time format", ["status" => 400]);
         }
 
-        $wpdb->query('START TRANSACTION');
+        $wpdb->query("START TRANSACTION");
 
         $course_exists = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM courses WHERE course_id = %d",
@@ -1017,16 +1134,16 @@ if (!function_exists('wp_delete_user')) {
         ));
 
         if (!$course_exists) {
-            $course_subject = $request->get_param('course_subject');
-            $subject_name   = $request->get_param('subject_name');
-            $course_code    = $request->get_param('course_code');
-            $course_name    = $request->get_param('course_name');
+            $course_subject = $request->get_param("course_subject");
+            $subject_name   = $request->get_param("subject_name");
+            $course_code    = $request->get_param("course_code");
+            $course_name    = $request->get_param("course_name");
 
             if (!$course_subject || !$course_code || !$course_name) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('missing_course_data', 
-                                    'course_subject, course_code, and course_name are required for new courses.',
-                                    ['status' => 400]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("missing_course_data", 
+                                    "course_subject, course_code, and course_name are required for new courses.",
+                                    ["status" => 400]);
             }
 
             $subject_exists = $wpdb->get_var($wpdb->prepare(
@@ -1036,42 +1153,42 @@ if (!function_exists('wp_delete_user')) {
 
             if (!$subject_exists) {
                 if (!$subject_name) {
-                    $wpdb->query('ROLLBACK');
-                    return new WP_Error('missing_subject_data', 
-                                        'subject_name is required for new subjects.', ['status' => 400]);
+                    $wpdb->query("ROLLBACK");
+                    return new WP_Error("missing_subject_data", 
+                                        "subject_name is required for new subjects.", ["status" => 400]);
                 }
 
                 $result = $wpdb->insert(
-                    'subjects',
+                    "subjects",
                     [
-                        'subject_code'  => $course_subject,
-                        'subject_name'  => $subject_name,
-                        'subject_count' => 0
+                        "subject_code"  => $course_subject,
+                        "subject_name"  => $subject_name,
+                        "subject_count" => 0
                     ],
-                    ['%s', '%s', '%d']
+                    ["%s", "%s", "%d"]
                 );
 
                 if ($result === false) {
-                    $wpdb->query('ROLLBACK');
-                    return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                    $wpdb->query("ROLLBACK");
+                    return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
                 }
             }
 
             $result = $wpdb->insert(
-                'courses',
+                "courses",
                 [
-                    'course_id'      => $course_id,
-                    'course_subject' => $course_subject,
-                    'course_code'    => $course_code,
-                    'course_name'    => $course_name,
-                    'course_count'   => 0
+                    "course_id"      => $course_id,
+                    "course_subject" => $course_subject,
+                    "course_code"    => $course_code,
+                    "course_name"    => $course_name,
+                    "course_count"   => 0
                 ],
-                ['%d', '%s', '%s', '%s', '%d']
+                ["%d", "%s", "%s", "%s", "%d"]
             );
 
             if ($result === false) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
             }
 
             $result = $wpdb->query($wpdb->prepare(
@@ -1080,26 +1197,26 @@ if (!function_exists('wp_delete_user')) {
             ));
 
             if ($result === false) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
             }
         }
 
         $result = $wpdb->insert(
-            'schedule',
+            "schedule",
             [
-                'user_id'     => $user_id,
-                'course_id'   => $course_id,
-                'day_of_week' => $day_of_week,
-                'start_time'  => $start_time,
-                'end_time'    => $end_time
+                "user_id"     => $user_id,
+                "course_id"   => $course_id,
+                "day_of_week" => $day_of_week,
+                "start_time"  => $start_time,
+                "end_time"    => $end_time
             ],
-            ['%d', '%d', '%s', '%s', '%s']
+            ["%d", "%d", "%s", "%s", "%s"]
         );
 
         if ($result === false) {
-            $wpdb->query('ROLLBACK');
-            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+            $wpdb->query("ROLLBACK");
+            return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
         }
 
         $result = $wpdb->query($wpdb->prepare(
@@ -1108,11 +1225,11 @@ if (!function_exists('wp_delete_user')) {
         ));
 
         if ($result === false) {
-            $wpdb->query('ROLLBACK');
-            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+            $wpdb->query("ROLLBACK");
+            return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
         }
 
-        $wpdb->query('COMMIT');
+        $wpdb->query("COMMIT");
 
         wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(M_SUBJECTS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
@@ -1120,13 +1237,13 @@ if (!function_exists('wp_delete_user')) {
         wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
         
 
-        return rest_ensure_response(['created' => true, 'schedule_id' => $wpdb->insert_id]);
+        return rest_ensure_response(["created" => true, "schedule_id" => $wpdb->insert_id]);
     }
 
 
     function delete_schedule(WP_REST_Request $request) {
         global $wpdb;
-        $schedule_id = $request->get_param('schedule_id');
+        $schedule_id = $request->get_param("schedule_id");
 
         // Get the course_id before deleting
         $course_id = $wpdb->get_var($wpdb->prepare(
@@ -1135,20 +1252,20 @@ if (!function_exists('wp_delete_user')) {
         ));
 
         if ($course_id === null) {
-            return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+            return new WP_Error("not_found", "No schedule found with that ID", ["status" => 404]);
         }
 
-        $wpdb->query('START TRANSACTION');
+        $wpdb->query("START TRANSACTION");
 
         $result = $wpdb->delete(
-            'schedule',
-            ['schedule_id' => $schedule_id],
-            ['%d']
+            "schedule",
+            ["schedule_id" => $schedule_id],
+            ["%d"]
         );
 
         if ($result === false) {
-            $wpdb->query('ROLLBACK');
-            return new WP_Error('db_error', 'Failed to delete schedule', ['status' => 500]);
+            $wpdb->query("ROLLBACK");
+            return new WP_Error("db_error", "Failed to delete schedule", ["status" => 500]);
         }
 
         $result = $wpdb->query($wpdb->prepare(
@@ -1157,36 +1274,36 @@ if (!function_exists('wp_delete_user')) {
         ));
 
         if ($result === false) {
-            $wpdb->query('ROLLBACK');
-            return new WP_Error('db_error', 'Failed to decrement course count', ['status' => 500]);
+            $wpdb->query("ROLLBACK");
+            return new WP_Error("db_error", "Failed to decrement course count", ["status" => 500]);
         }
 
-        $wpdb->query('COMMIT');
+        $wpdb->query("COMMIT");
 
         wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['deleted' => true, 'schedule_id' => $schedule_id]);
+        return rest_ensure_response(["deleted" => true, "schedule_id" => $schedule_id]);
     }
 
 
     function update_schedule(WP_REST_Request $request) {
         global $wpdb;
-        $schedule_id = $request->get_param('schedule_id');
-        $user_id     = $request->get_param('user_id');
-        $course_id   = $request->get_param('course_id');
-        $day_of_week = $request->get_param('day_of_week');
-        $start_time  = $request->get_param('start_time');
-        $end_time    = $request->get_param('end_time');
+        $schedule_id = $request->get_param("schedule_id");
+        $user_id     = $request->get_param("user_id");
+        $course_id   = $request->get_param("course_id");
+        $day_of_week = $request->get_param("day_of_week");
+        $start_time  = $request->get_param("start_time");
+        $end_time    = $request->get_param("end_time");
 
         if ($day_of_week === false) {
-            return new WP_Error('invalid_day', 'Invalid day of week', ['status' => 400]);
+            return new WP_Error("invalid_day", "Invalid day of week", ["status" => 400]);
         }
         if ($start_time === false) {
-            return new WP_Error('invalid_start_time', 'Invalid start time format', ['status' => 400]);
+            return new WP_Error("invalid_start_time", "Invalid start time format", ["status" => 400]);
         }
         if ($end_time === false) {
-            return new WP_Error('invalid_end_time', 'Invalid end time format', ['status' => 400]);
+            return new WP_Error("invalid_end_time", "Invalid end time format", ["status" => 400]);
         }
 
         // Get the current course_id before making any changes
@@ -1196,10 +1313,10 @@ if (!function_exists('wp_delete_user')) {
         ));
 
         if ($old_course_id === null) {
-            return new WP_Error('not_found', 'No schedule found with that ID', ['status' => 404]);
+            return new WP_Error("not_found", "No schedule found with that ID", ["status" => 404]);
         }
 
-        $wpdb->query('START TRANSACTION');
+        $wpdb->query("START TRANSACTION");
 
         $course_changed = (int)$old_course_id !== (int)$course_id;
 
@@ -1210,16 +1327,16 @@ if (!function_exists('wp_delete_user')) {
         ));
 
         if (!$course_exists) {
-            $course_subject = $request->get_param('course_subject');
-            $subject_name   = $request->get_param('subject_name');
-            $course_code    = $request->get_param('course_code');
-            $course_name    = $request->get_param('course_name');
+            $course_subject = $request->get_param("course_subject");
+            $subject_name   = $request->get_param("subject_name");
+            $course_code    = $request->get_param("course_code");
+            $course_name    = $request->get_param("course_name");
 
             if (!$course_subject || !$course_code || !$course_name) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('missing_course_data', 
-                                    'course_subject, course_code, and course_name are required for new courses.', 
-                                    ['status' => 400]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("missing_course_data", 
+                                    "course_subject, course_code, and course_name are required for new courses.", 
+                                    ["status" => 400]);
             }
 
             $subject_exists = $wpdb->get_var($wpdb->prepare(
@@ -1229,42 +1346,42 @@ if (!function_exists('wp_delete_user')) {
 
             if (!$subject_exists) {
                 if (!$subject_name) {
-                    $wpdb->query('ROLLBACK');
-                    return new WP_Error('missing_subject_data', 
-                                        'subject_name is required for new subjects.', ['status' => 400]);
+                    $wpdb->query("ROLLBACK");
+                    return new WP_Error("missing_subject_data", 
+                                        "subject_name is required for new subjects.", ["status" => 400]);
                 }
 
                 $result = $wpdb->insert(
-                    'subjects',
+                    "subjects",
                     [
-                        'subject_code'  => $course_subject,
-                        'subject_name'  => $subject_name,
-                        'subject_count' => 0
+                        "subject_code"  => $course_subject,
+                        "subject_name"  => $subject_name,
+                        "subject_count" => 0
                     ],
-                    ['%s', '%s', '%d']
+                    ["%s", "%s", "%d"]
                 );
 
                 if ($result === false) {
-                    $wpdb->query('ROLLBACK');
-                    return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                    $wpdb->query("ROLLBACK");
+                    return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
                 }
             }
 
             $result = $wpdb->insert(
-                'courses',
+                "courses",
                 [
-                    'course_id'      => $course_id,
-                    'course_subject' => $course_subject,
-                    'course_code'    => $course_code,
-                    'course_name'    => $course_name,
-                    'course_count'   => 0
+                    "course_id"      => $course_id,
+                    "course_subject" => $course_subject,
+                    "course_code"    => $course_code,
+                    "course_name"    => $course_name,
+                    "course_count"   => 0
                 ],
-                ['%d', '%s', '%s', '%s', '%d']
+                ["%d", "%s", "%s", "%s", "%d"]
             );
 
             if ($result === false) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
             }
 
             $result = $wpdb->query($wpdb->prepare(
@@ -1273,8 +1390,8 @@ if (!function_exists('wp_delete_user')) {
             ));
 
             if ($result === false) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
             }
         }
 
@@ -1285,8 +1402,8 @@ if (!function_exists('wp_delete_user')) {
             ));
 
             if ($result === false) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
             }
 
             $result = $wpdb->query($wpdb->prepare(
@@ -1295,36 +1412,36 @@ if (!function_exists('wp_delete_user')) {
             ));
 
             if ($result === false) {
-                $wpdb->query('ROLLBACK');
-                return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+                $wpdb->query("ROLLBACK");
+                return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
             }
         }
 
         $result = $wpdb->update(
-            'schedule',
+            "schedule",
             [
-                'user_id'     => $user_id,
-                'course_id'   => $course_id,
-                'day_of_week' => $day_of_week,
-                'start_time'  => $start_time,
-                'end_time'    => $end_time,
+                "user_id"     => $user_id,
+                "course_id"   => $course_id,
+                "day_of_week" => $day_of_week,
+                "start_time"  => $start_time,
+                "end_time"    => $end_time,
             ],
-            ['schedule_id' => $schedule_id],
-            ['%d', '%d', '%s', '%s', '%s'],
-            ['%d']
+            ["schedule_id" => $schedule_id],
+            ["%d", "%d", "%s", "%s", "%s"],
+            ["%d"]
         );
 
         if ($result === false) {
-            $wpdb->query('ROLLBACK');
-            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+            $wpdb->query("ROLLBACK");
+            return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
         }
 
-        $wpdb->query('COMMIT');
+        $wpdb->query("COMMIT");
 
         wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['updated' => true, 'schedule_id' => $schedule_id]);
+        return rest_ensure_response(["updated" => true, "schedule_id" => $schedule_id]);
     }
 }
 //---------------------------------------------------------------------------------------------------------------------
@@ -1336,116 +1453,116 @@ if (!function_exists('wp_delete_user')) {
     function create_event(WP_REST_Request $request) {
         global $wpdb;
 
-        $event_type = $request->get_param('event_type');
-        $user_id    = $request->get_param('user_id');
-        $start_day  = $request->get_param('start_day');
-        $final_day  = $request->get_param('final_day');
-        $duration   = $request->get_param('duration');
+        $event_type = $request->get_param("event_type");
+        $user_id    = $request->get_param("user_id");
+        $start_day  = $request->get_param("start_day");
+        $final_day  = $request->get_param("final_day");
+        $duration   = $request->get_param("duration");
 
         if ($start_day === false || $start_day === null) {
-            return new WP_Error('invalid_start_day', 'Invalid start day', ['status' => 400]);
+            return new WP_Error("invalid_start_day", "Invalid start day", ["status" => 400]);
         }
 
         if ($final_day === false) {
-            return new WP_Error('invalid_final_day', 'Invalid final day', ['status' => 400]);
+            return new WP_Error("invalid_final_day", "Invalid final day", ["status" => 400]);
         }
 
-        if ($duration === '' || $duration === 'null') {
+        if ($duration === "" || $duration === "null") {
             $duration = null;
         }
 
         $result = $wpdb->insert(
-            'events',
+            "events",
             [
-                'event_type' => $event_type,
-                'user_id'    => $user_id,
-                'start_day'  => $start_day,
-                'final_day'  => $final_day,
-                'duration'   => $duration
+                "event_type" => $event_type,
+                "user_id"    => $user_id,
+                "start_day"  => $start_day,
+                "final_day"  => $final_day,
+                "duration"   => $duration
             ],
-            ['%d', '%d', '%s', '%s', '%d']
+            ["%d", "%d", "%s", "%s", "%d"]
         );
 
         if ($result === false) {
-            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+            return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
         }
 
         wp_cache_delete(U_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(M_EVENTS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['created' => true, 'event_id' => $wpdb->insert_id]);
+        return rest_ensure_response(["created" => true, "event_id" => $wpdb->insert_id]);
     }
 
 
     function delete_event(WP_REST_Request $request) {
         global $wpdb;
-        $event_id = $request->get_param('event_id');
+        $event_id = $request->get_param("event_id");
         
         $result = $wpdb->delete(
-            'events',
-            ['event_id' => $event_id],
-            ['%d']
+            "events",
+            ["event_id" => $event_id],
+            ["%d"]
         );
 
         if ($result === false) {
-            return new WP_Error('db_error', 'Failed to delete event' . print_r($event_id) , ['status' => 500]);
+            return new WP_Error("db_error", "Failed to delete event" . print_r($event_id) , ["status" => 500]);
         }
 
         if ($result === 0) {
-            return new WP_Error('not_found', 'No event found with ID: ' . $event_id, ['status' => 404]);
+            return new WP_Error("not_found", "No event found with ID: " . $event_id, ["status" => 404]);
         }
         
         wp_cache_delete(U_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(M_EVENTS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['deleted' => true, 'event_id' => $event_id]);
+        return rest_ensure_response(["deleted" => true, "event_id" => $event_id]);
     }
 
 
     function update_event(WP_REST_Request $request) {
         global $wpdb;
 
-        $event_id    = $request->get_param('event_id');
-        $event_type  = $request->get_param('event_type');
-        $user_id     = $request->get_param('user_id');
-        $start_day   = $request->get_param('start_day');
-        $final_day   = $request->get_param('final_day');
-        $duration    = $request->get_param('duration');
+        $event_id    = $request->get_param("event_id");
+        $event_type  = $request->get_param("event_type");
+        $user_id     = $request->get_param("user_id");
+        $start_day   = $request->get_param("start_day");
+        $final_day   = $request->get_param("final_day");
+        $duration    = $request->get_param("duration");
 
         if ($start_day === false || $start_day === null) {
-            return new WP_Error('invalid_start_day', 'Invalid start day', ['status' => 400]);
+            return new WP_Error("invalid_start_day", "Invalid start day", ["status" => 400]);
         }
 
         if ($final_day === false) {
-            return new WP_Error('invalid_final_day', 'Invalid final day', ['status' => 400]);
+            return new WP_Error("invalid_final_day", "Invalid final day", ["status" => 400]);
         }
 
-        if ($duration === '' || $duration === 'null') {
+        if ($duration === "" || $duration === "null") {
             $duration = null;
         }
 
         $result = $wpdb->update(
-            'events',
+            "events",
             [
-                'event_type' => $event_type,
-                'user_id'    => $user_id,
-                'start_day'  => $start_day,
-                'final_day'  => $final_day,
-                'duration'   => $duration
+                "event_type" => $event_type,
+                "user_id"    => $user_id,
+                "start_day"  => $start_day,
+                "final_day"  => $final_day,
+                "duration"   => $duration
             ],
-            ['event_id' => $event_id],
-            ['%d', '%d', '%s', '%s', '%d'],
-            ['%d']
+            ["event_id" => $event_id],
+            ["%d", "%d", "%s", "%s", "%d"],
+            ["%d"]
         );
 
         if ($result === false) {
-            return new WP_Error('db_error', $wpdb->last_error, ['status' => 500]);
+            return new WP_Error("db_error", $wpdb->last_error, ["status" => 500]);
         }
 
         wp_cache_delete(U_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(M_EVENTS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['updated' => true, 'event_id' => $event_id]);
+        return rest_ensure_response(["updated" => true, "event_id" => $event_id]);
     }
 }
 
@@ -1454,29 +1571,29 @@ if (!function_exists('wp_delete_user')) {
 //---------------------------------------------------------------------------------------------------------------------
 {
     function create_account(WP_REST_Request $request) {
-        $user_login = $request->get_param('user_login');
-        $user_email = $request->get_param('user_email');
-        $first_name = $request->get_param('first_name');
-        $last_name  = $request->get_param('last_name');
-        $roles      = $request->get_param('roles');
+        $user_login = $request->get_param("user_login");
+        $user_email = $request->get_param("user_email");
+        $first_name = $request->get_param("first_name");
+        $last_name  = $request->get_param("last_name");
+        $roles      = $request->get_param("roles");
 
         if (!is_array($roles) || count($roles) < 1) {
-            return new WP_Error('invalid_roles', 'At least one valid role is required.', ['status' => 400]);
+            return new WP_Error("invalid_roles", "At least one valid role is required.", ["status" => 400]);
         }
 
-        $roles = array_map('sanitize_text_field', $roles);
+        $roles = array_map("sanitize_text_field", $roles);
 
         $user_id = wp_insert_user([
-            'user_login' => $user_login,
-            'user_email' => $user_email,
-            'first_name' => $first_name,
-            'last_name'  => $last_name,
-            'user_pass'  => wp_generate_password(64),
-            'role'       => $roles[0]
+            "user_login" => $user_login,
+            "user_email" => $user_email,
+            "first_name" => $first_name,
+            "last_name"  => $last_name,
+            "user_pass"  => wp_generate_password(64),
+            "role"       => $roles[0]
         ]);
 
         if (is_wp_error($user_id)) {
-            return new WP_Error('db_error', $user_id->get_error_message(), ['status' => 500]);
+            return new WP_Error("db_error", $user_id->get_error_message(), ["status" => 500]);
         }
 
         if (count($roles) === 2) {
@@ -1486,97 +1603,97 @@ if (!function_exists('wp_delete_user')) {
 
         wp_cache_delete(M_USERS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['created' => true, 'user_id' => $user_id]);
+        return rest_ensure_response(["created" => true, "user_id" => $user_id]);
     }
 
 
     function delete_account(WP_REST_Request $request) {
         global $wpdb;
 
-        $user_id = $request->get_param('user_id');
+        $user_id = $request->get_param("user_id");
         $curr_user_id = get_current_user_id();
 
         if ($user_id == $curr_user_id) {
-            return new WP_Error('invalid_user_id', 'Cannot delete the current user', ['status' => 400]);
+            return new WP_Error("invalid_user_id", "Cannot delete the current user", ["status" => 400]);
         }
 
         $is_tutor = false;
         $user = new WP_User($user_id);
 
         if (!$user->exists()) {
-            return new WP_Error('not_found', 'No user found with that ID', ['status' => 404]);
+            return new WP_Error("not_found", "No user found with that ID", ["status" => 404]);
         }
 
-        if (in_array('tutor', (array) $user->roles, true)) {
+        if (in_array(TUTOR_ROLE, (array) $user->roles, true)) {
             $is_tutor = true;
         }
 
-        $wpdb->query('START TRANSACTION');
+        $wpdb->query("START TRANSACTION");
 
         $cleaned = clean_up_user($user_id);
         if (is_wp_error($cleaned)) {
-            $wpdb->query('ROLLBACK');
+            $wpdb->query("ROLLBACK");
             return $cleaned;
         }
 
         $result = wp_delete_user($user_id);
 
         if ($result === false) {
-            $wpdb->query('ROLLBACK');
-            return new WP_Error('not_found', 'No user found with that ID', ['status' => 404]);
+            $wpdb->query("ROLLBACK");
+            return new WP_Error("not_found", "No user found with that ID", ["status" => 404]);
         }
 
-        $wpdb->query('COMMIT');
+        $wpdb->query("COMMIT");
 
         if ($is_tutor) {
             wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
             wp_cache_delete(U_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
             wp_cache_delete(M_SCHEDULE_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
-            wp_cache_delete(M_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
+            wp_cache_delete(M_EVENTS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
         }
 
         wp_cache_delete(M_USERS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['deleted' => true, 'user_id' => $user_id]);
+        return rest_ensure_response(["deleted" => true, "user_id" => $user_id]);
     }
 
 
     function update_account(WP_REST_Request $request) {
         global $wpdb;
 
-        $user_id     = $request->get_param('user_id');
+        $user_id     = $request->get_param("user_id");
         $curr_user_id = get_current_user_id();
 
-        $user_login  = $request->get_param('user_login');
-        $user_email  = $request->get_param('user_email');
-        $first_name  = $request->get_param('first_name');
-        $last_name   = $request->get_param('last_name');
-        $roles       = $request->get_param('roles');
+        $user_login  = $request->get_param("user_login");
+        $user_email  = $request->get_param("user_email");
+        $first_name  = $request->get_param("first_name");
+        $last_name   = $request->get_param("last_name");
+        $roles       = $request->get_param("roles");
 
         if ($user_id == $curr_user_id) {
-            return new WP_Error('invalid_user_id', 'Cannot modify the current user', ['status' => 400]);
+            return new WP_Error("invalid_user_id", "Cannot modify the current user", ["status" => 400]);
         }
 
         $user = new WP_User($user_id);
         if (!$user->exists()) {
-            return new WP_Error('user_not_found', 'User does not exist.', ['status' => 404]);
+            return new WP_Error("user_not_found", "User does not exist.", ["status" => 404]);
         }
 
-        $was_tutor = in_array('tutor', (array) $user->roles, true);
+        $was_tutor = in_array(TUTOR_ROLE, (array) $user->roles, true);
 
-        $wpdb->query('START TRANSACTION');
+        $wpdb->query("START TRANSACTION");
 
         $updated = wp_update_user([
-            'ID'         => $user_id,
-            'user_login' => $user_login,
-            'user_email' => $user_email,
-            'first_name' => $first_name,
-            'last_name'  => $last_name,
+            "ID"         => $user_id,
+            "user_login" => $user_login,
+            "user_email" => $user_email,
+            "first_name" => $first_name,
+            "last_name"  => $last_name,
         ]);
 
         if (is_wp_error($updated)) {
-            $wpdb->query('ROLLBACK');
-            return new WP_Error('db_error', $updated->get_error_message(), ['status' => 500]);
+            $wpdb->query("ROLLBACK");
+            return new WP_Error("db_error", $updated->get_error_message(), ["status" => 500]);
         }
 
         $user = new WP_User($user_id);
@@ -1585,10 +1702,10 @@ if (!function_exists('wp_delete_user')) {
             $user->add_role($roles[1]);
         }
 
-        if (!in_array('tutor', $roles, true) && $was_tutor) {
+        if (!in_array(TUTOR_ROLE, $roles, true) && $was_tutor) {
             $cleaned = clean_up_user($user_id);
             if (is_wp_error($cleaned)) {
-                $wpdb->query('ROLLBACK');
+                $wpdb->query("ROLLBACK");
                 return $cleaned;
             }
 
@@ -1598,11 +1715,11 @@ if (!function_exists('wp_delete_user')) {
             wp_cache_delete(M_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
         }
 
-        $wpdb->query('COMMIT');
+        $wpdb->query("COMMIT");
 
         wp_cache_delete(M_USERS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
-        return rest_ensure_response(['updated' => true, 'user_id' => $user_id]);
+        return rest_ensure_response(["updated" => true, "user_id" => $user_id]);
     }
 }
 //---------------------------------------------------------------------------------------------------------------------
@@ -1611,33 +1728,33 @@ if (!function_exists('wp_delete_user')) {
 // umbc_db REST API
 //---------------------------------------------------------------------------------------------------------------------
 {
-    add_action('rest_api_init', function() {
-        register_rest_route('asc-tutoring/v1', '/umbc_db/accounts', [
-        'methods'             => 'GET',
-        'callback'            => 'get_umbc_accounts',
-        'permission_callback' => function() {
-            return current_user_can('admin_control');
+    add_action("rest_api_init", function() {
+        register_rest_route("asc-tutoring/v1", "/umbc_db/accounts", [
+        "methods"             => "GET",
+        "callback"            => "get_umbc_accounts",
+        "permission_callback" => function() {
+            return current_user_can("admin_control");
         },
-        'args' => [
-            'search_str' => [
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_text_field',
-                'default'           => '',
+        "args" => [
+            "search_str" => [
+                "required"          => false,
+                "sanitize_callback" => "sanitize_text_field",
+                "default"           => "",
             ]
         ],
     ]);
 
-        register_rest_route('asc-tutoring/v1', '/umbc_db/courses', [
-            'methods'             => 'GET',
-            'callback'            => 'get_umbc_courses',
-            'permission_callback' => function() {
-                return current_user_can('admin_control');
+        register_rest_route("asc-tutoring/v1", "/umbc_db/courses", [
+            "methods"             => "GET",
+            "callback"            => "get_umbc_courses",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
             },
-            'args' => [
-                'search_str' => [
-                    'required'          => false,
-                    'sanitize_callback' => 'sanitize_text_field',
-                    'default'           => '',
+            "args" => [
+                "search_str" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_text_field",
+                    "default"           => "",
                 ]
             ],
         ]);
@@ -1645,12 +1762,12 @@ if (!function_exists('wp_delete_user')) {
 
 
     function get_umbc_courses(WP_REST_Request $request) {
-        $search_str = trim((string) $request->get_param('search_str'));
+        $search_str = trim((string) $request->get_param("search_str"));
 
-        $umbcPdo = db_connect_root('umbc_db');
+        $umbcPdo = db_connect_root("umbc_db");
 
         try {
-            if ($search_str === '') {
+            if ($search_str === "") {
                 $stmt = $umbcPdo->prepare("
                     SELECT 
                         c.course_id,
@@ -1683,30 +1800,30 @@ if (!function_exists('wp_delete_user')) {
                     ORDER BY c.course_subject, c.course_code
                 ");
 
-                $stmt->bindValue(':search', '%' . $search_str . '%', PDO::PARAM_STR);
+                $stmt->bindValue(":search", "%" . $search_str . "%", PDO::PARAM_STR);
                 $stmt->execute();
             }
 
             $umbc_courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         } catch (PDOException $e) {
-            return new WP_Error('db_error', 'Failed to retrieve courses.', ['status' => 500]);
+            return new WP_Error("db_error", "Failed to retrieve courses.", ["status" => 500]);
         }
 
         return rest_ensure_response([
-            'success' => true,
-            'umbc_courses' => $umbc_courses
+            "success" => true,
+            "umbc_courses" => $umbc_courses
         ]);
     }
 
 
     function get_umbc_accounts(WP_REST_Request $request) {
-        $search_str = trim((string) $request->get_param('search_str'));
+        $search_str = trim((string) $request->get_param("search_str"));
 
-        $umbcPdo = db_connect_root('umbc_db');
+        $umbcPdo = db_connect_root("umbc_db");
 
         try {
-            if ($search_str === '') {
+            if ($search_str === "") {
                 $stmt = $umbcPdo->prepare("SELECT
                                             umbc_id,
                                             first_name,
@@ -1729,18 +1846,18 @@ if (!function_exists('wp_delete_user')) {
                                             OR umbc_email LIKE :search
                                         ORDER BY last_name, first_name, umbc_id");
 
-                $stmt->bindValue(':search', '%' . $search_str . '%', PDO::PARAM_STR);
+                $stmt->bindValue(":search", "%" . $search_str . "%", PDO::PARAM_STR);
                 $stmt->execute();
             }
 
             $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         } catch (PDOException $e) {
-            error_log('UMBC account search query failed: ' . $e->getMessage());
-            return new WP_Error('db_error', 'Failed to retrieve accounts.', ['status' => 500]);
+            error_log("UMBC account search query failed: " . $e->getMessage());
+            return new WP_Error("db_error", "Failed to retrieve accounts.", ["status" => 500]);
         }
 
-        return rest_ensure_response(['success' => true, 'umbc_accounts' => $accounts]);
+        return rest_ensure_response(["success" => true, "umbc_accounts" => $accounts]);
     }
 }
 //---------------------------------------------------------------------------------------------------------------------

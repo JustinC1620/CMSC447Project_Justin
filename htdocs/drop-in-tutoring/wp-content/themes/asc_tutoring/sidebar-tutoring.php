@@ -20,7 +20,7 @@ $current_classes = $is_current ? ' current-menu-item page_item current_page_item
 </li>
 <li class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://academicsuccess.umbc.edu/writing-center/" target="_self">Writing Center</a></li>
 <?php 
-    $is_current = is_page('drop-in-tutoring/tutoring-admin');
+    $is_current = is_page('tutoring-admin');
     $current_classes = $is_current ? ' current-menu-item page_item current_page_item' : '';
     if (current_user_can('staff_control')) {
         echo '<li class="menu-item menu-item-type-post_type menu-item-object-page ' . $current_classes . '"><a href="' . home_url('/tutoring-admin') . '">Tutoring Admin</a></li>';

@@ -20,6 +20,7 @@ $eventTypes = [];
 
 role_setup();
 drop_tables($umbcPdo, $ascPdo);
+flush_cache();
 
 while (($row = fgetcsv($file)) !== false) {
     if (in_array($row[0], TABLES)) {
@@ -223,13 +224,6 @@ function populate_users(&$data, $umbcPdo, $ascPdo, &$users) {
 function populate_schedule(&$data, $umbcPdo, $ascPdo, &$courses, &$users) {
     static $ascStmt = null;
     static $updateStmt = null;
-    $DAYS = [
-        "Monday" => "MON",
-        "Tuesday" => "TUE",
-        "Wednesday" => "WED",
-        "Thursday" => "THU",
-        "Friday" => "FRI"
-    ];
 
     if ($ascStmt == null) {
         create_asc_schedule($ascPdo);
@@ -249,7 +243,7 @@ function populate_schedule(&$data, $umbcPdo, $ascPdo, &$courses, &$users) {
     $stmtArr = [
         ":user_id" => $users[$data["first_name"]],
         ":course_id" => $courses[$data["course_subject"] . $data["course_code"]],
-        ":day_of_week" => $DAYS[$data["day_of_week"]],
+        ":day_of_week" => get_day_abbr($data["day_of_week"]),
         ":start_time" => $data["start_time"],
         ":end_time" => $data["end_time"]
     ];

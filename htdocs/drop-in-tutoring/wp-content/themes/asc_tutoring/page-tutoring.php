@@ -165,7 +165,37 @@ get_header();
                               <td><?php echo esc_html(tutoring_format_time($entry['start_time'])); ?></td>
                               <td><?php echo esc_html(tutoring_format_time($entry['end_time'])); ?></td>
                               <td><?php echo esc_html($entry['first_name']); ?></td>
-                              <td class="tutoring-status-available">Available</td>
+                              <?php
+                                $status = tutoring_get_tutor_status(
+                                    $entry['user_id'],
+                                    $entry['day_of_week'],
+                                    $entry['start_time'],
+                                    $entry['end_time'],
+                                    $eventTypes,
+                                    $uEvents
+                                );
+                              ?>
+                              <td class="tutoring-status-cell">
+                                <div class="tutoring-status-stack">
+                                  <div class="tutoring-status-main" style="color: <?php echo esc_attr($status['color']); ?>;">
+                                    <?php if ($status['icon']): ?>
+                                      <span class="tutoring-status-icon" aria-hidden="true"><?php echo $status['icon']; ?></span>
+                                    <?php endif; ?>
+                                    <span class="tutoring-status-label"><?php echo esc_html($status['label']); ?></span>
+                                  </div>
+                                  <?php if (!empty($status['leaving_early_note'])): ?>
+                                    <div class="tutoring-status-sub tutoring-leaving-early-note">
+                                      <?php echo $status['leaving_early_icon']; ?>
+                                      <?php echo esc_html($status['leaving_early_note']); ?>
+                                    </div>
+                                  <?php endif; ?>
+                                  <?php if (!empty($status['absent_note'])): ?>
+                                    <div class="tutoring-status-sub tutoring-absent-note">
+                                      <?php echo esc_html($status['absent_note']); ?>
+                                    </div>
+                                  <?php endif; ?>
+                                </div>
+                              </td>
                             </tr>
                           <?php
                             endforeach;
@@ -195,9 +225,43 @@ get_header();
 </main>
 
 <style>
-.entry-content .umbc-table td.tutoring-status-available {
-  color: #2e7d32 !important;
-  font-weight: 700 !important;
+.entry-content .umbc-table td.tutoring-status-cell {
+  white-space: nowrap;
+  vertical-align: middle;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.tutoring-status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tutoring-status-main {
+  font-weight: bold;
+  line-height: 1.3;
+}
+
+.tutoring-status-icon svg {
+  margin-right: 3px;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+
+.tutoring-status-sub {
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.tutoring-leaving-early-note {
+  font-weight: bold;
+  color: #ffbb1b;
+}
+
+.tutoring-absent-note {
+  color: #555;
 }
 
 .subject-filter-button.active {
