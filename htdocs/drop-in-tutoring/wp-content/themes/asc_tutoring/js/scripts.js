@@ -462,6 +462,15 @@ document.addEventListener('DOMContentLoaded', () => {
     'schedule_end_time',
   ];
 
+  const scheduleTimeDropdownIds = [
+  'schedule_start_time_hour',
+  'schedule_start_time_minute',
+  'schedule_start_time_ampm',
+  'schedule_end_time_hour',
+  'schedule_end_time_minute',
+  'schedule_end_time_ampm',
+];
+
   const accountLookupResults = document.getElementById('account_lookup_results');
 
   const accountFieldIds = ['user_login', 'user_email', 'first_name', 'last_name'];
@@ -535,20 +544,97 @@ const setScheduleCourseFieldsEditable = (editable) => {
   });
 };
 
+const setScheduleTimeDropdownsEditable = (editable) => {
+  scheduleTimeDropdownIds.forEach((id) => {
+    const field = document.getElementById(id);
+    if (!field) return;
+
+    field.disabled = !editable;
+    field.classList.toggle('account-field-locked', !editable);
+  });
+};
+
+function setTimeDropdowns(prefix, timeValue) {
+  const hourField = document.getElementById(`${prefix}_hour`);
+  const minuteField = document.getElementById(`${prefix}_minute`);
+  const ampmField = document.getElementById(`${prefix}_ampm`);
+  const hiddenField = document.getElementById(prefix);
+
+  if (!hourField || !minuteField || !ampmField || !hiddenField) return;
+
+  if (!timeValue) {
+    hourField.value = '';
+    minuteField.value = '';
+    ampmField.value = '';
+    hiddenField.value = '';
+    return;
+  }
+
+  const time = String(timeValue).trim().toLowerCase();
+  const match = time.match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(am|pm))?$/);
+  if (!match) return;
+
+  let hour = parseInt(match[1], 10);
+  const minute = match[2];
+  let ampm = match[3];
+
+  if (!ampm) {
+    ampm = hour >= 12 ? 'pm' : 'am';
+    hour = hour % 12;
+    if (hour === 0) hour = 12;
+  }
+
+  hourField.value = String(hour);
+  minuteField.value = minute;
+  ampmField.value = ampm;
+  hiddenField.value = `${hour}:${minute} ${ampm}`;
+}
+
+function updateHiddenTimeField(prefix) {
+  const hour = document.getElementById(`${prefix}_hour`)?.value || '';
+  const minute = document.getElementById(`${prefix}_minute`)?.value || '';
+  const ampm = document.getElementById(`${prefix}_ampm`)?.value || '';
+  const hiddenField = document.getElementById(prefix);
+
+  if (!hiddenField) return;
+
+  if (!hour || !minute || !ampm) {
+    hiddenField.value = '';
+    return;
+  }
+
+  hiddenField.value = `${hour}:${minute} ${ampm}`;
+}
+
+function bindTimeDropdowns(prefix) {
+  ['hour', 'minute', 'ampm'].forEach((part) => {
+    document.getElementById(`${prefix}_${part}`)?.addEventListener('change', () => {
+      updateHiddenTimeField(prefix);
+    });
+  });
+}
+
+bindTimeDropdowns('schedule_start_time');
+bindTimeDropdowns('schedule_end_time');
+
 const setScheduleFormMode = (mode) => {
   const isEditMode = mode === 'edit';
 
   if (isEditMode) {
     setScheduleCourseFieldsEditable(true);
+    setScheduleTimeDropdownsEditable(true);
     return;
   }
 
   const hasSelectedCourse = !!(scheduleCourseLookup && scheduleCourseLookup.value);
 
   setScheduleCourseFieldsEditable(hasSelectedCourse);
+  setScheduleTimeDropdownsEditable(hasSelectedCourse);
 
   if (!hasSelectedCourse) {
     clearScheduleCourseFields();
+    setTimeDropdowns('schedule_start_time', '');
+    setTimeDropdowns('schedule_end_time', '');
   } else {
     const courseIdField = document.getElementById('schedule_course_id');
     if (courseIdField) {
@@ -812,8 +898,8 @@ document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
     };
 
     document.getElementById('schedule_day_of_week').value = dayMap[row.dataset.dayOfWeek] || '';
-    document.getElementById('schedule_start_time').value = row.dataset.startTime;
-    document.getElementById('schedule_end_time').value = row.dataset.endTime;
+    setTimeDropdowns('schedule_start_time', row.dataset.startTime);
+    setTimeDropdowns('schedule_end_time', row.dataset.endTime);
 
     if (scheduleCourseLookup) {
       scheduleCourseLookup.value = '';
@@ -844,13 +930,24 @@ document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
   scheduleForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    updateHiddenTimeField('schedule_start_time');
+    updateHiddenTimeField('schedule_end_time');
+
+    const startTime = document.getElementById('schedule_start_time').value;
+    const endTime = document.getElementById('schedule_end_time').value;
+
+    if (!startTime || !endTime) {
+      showMessage('Please select both a start time and end time.', 'error');
+      return;
+    }
+
     const id = document.getElementById('schedule_id').value.trim();
     const payload = {
       user_id: Number(document.getElementById('schedule_user_id').value),
       course_id: Number(document.getElementById('schedule_course_id').value),
       day_of_week: document.getElementById('schedule_day_of_week').value,
-      start_time: document.getElementById('schedule_start_time').value,
-      end_time: document.getElementById('schedule_end_time').value,
+      start_time: startTime,
+      end_time: endTime,
     };
 
     try {
@@ -861,7 +958,10 @@ document.querySelectorAll('.admin-edit-schedule').forEach(btn => {
         const data = await requestJson('/schedule', 'POST', payload);
         showMessage(`Created schedule entry ${data.schedule_id}. Reload to refresh the table.`);
       }
+
       scheduleForm.reset();
+      setTimeDropdowns('schedule_start_time', '');
+      setTimeDropdowns('schedule_end_time', '');
     } catch (err) {
       showMessage(err.message, 'error');
     }
@@ -1111,5 +1211,3 @@ document.addEventListener("DOMContentLoaded", function () {
   // run once on load
   toggleFields();
 });
-
-

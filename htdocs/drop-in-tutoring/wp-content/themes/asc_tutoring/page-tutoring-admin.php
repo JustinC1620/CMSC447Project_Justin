@@ -103,8 +103,16 @@ foreach ($eventTypes as $eventType) {
 
                 <div id="duration-field">
                   <label for="duration"><strong>Duration (minutes)</strong></label>
-                  <input type="number" id="duration" name="duration" min="0" step="1" />
+                  <select id="duration" name="duration">
+                    <option value="">Select duration</option>
+                    <?php for ($m = 5; $m <= 60; $m += 5) : ?>
+                      <option value="<?php echo esc_attr($m); ?>">
+                        <?php echo esc_html($m); ?>
+                      </option>
+                    <?php endfor; ?>
+                  </select>
                 </div>
+                
               </div>
 
               <div class="admin-actions">
@@ -202,13 +210,61 @@ foreach ($eventTypes as $eventType) {
                 </div>
 
                 <div>
-                  <label for="schedule_start_time"><strong>Start Time</strong></label>
-                  <input type="text" id="schedule_start_time" name="start_time" placeholder="ex: 1:00 pm" required />
+                  <label><strong>Start Time</strong></label>
+                  <div class="time-select-row">
+                    <select id="schedule_start_time_hour" aria-label="Start time hour" required>
+                      <option value="">Hour</option>
+                      <?php for ($h = 1; $h <= 12; $h++) : ?>
+                        <option value="<?php echo esc_attr($h); ?>"><?php echo esc_html($h); ?></option>
+                      <?php endfor; ?>
+                    </select>
+
+                    <select id="schedule_start_time_minute" aria-label="Start time minute" required>
+                      <option value="">Min</option>
+                      <?php for ($m = 0; $m < 60; $m += 5) : ?>
+                        <option value="<?php echo esc_attr(sprintf('%02d', $m)); ?>">
+                          <?php echo esc_html(sprintf('%02d', $m)); ?>
+                        </option>
+                      <?php endfor; ?>
+                    </select>
+
+                    <select id="schedule_start_time_ampm" aria-label="Start time AM or PM" required>
+                      <option value="">AM/PM</option>
+                      <option value="am">AM</option>
+                      <option value="pm">PM</option>
+                    </select>
+                  </div>
+
+                  <input type="hidden" id="schedule_start_time" name="start_time" required />
                 </div>
 
                 <div>
-                  <label for="schedule_end_time"><strong>End Time</strong></label>
-                  <input type="text" id="schedule_end_time" name="end_time" placeholder="ex: 2:00 pm" required />
+                  <label><strong>End Time</strong></label>
+                  <div class="time-select-row">
+                    <select id="schedule_end_time_hour" aria-label="End time hour" required>
+                      <option value="">Hour</option>
+                      <?php for ($h = 1; $h <= 12; $h++) : ?>
+                        <option value="<?php echo esc_attr($h); ?>"><?php echo esc_html($h); ?></option>
+                      <?php endfor; ?>
+                    </select>
+
+                    <select id="schedule_end_time_minute" aria-label="End time minute" required>
+                      <option value="">Min</option>
+                      <?php for ($m = 0; $m < 60; $m += 5) : ?>
+                        <option value="<?php echo esc_attr(sprintf('%02d', $m)); ?>">
+                          <?php echo esc_html(sprintf('%02d', $m)); ?>
+                        </option>
+                      <?php endfor; ?>
+                    </select>
+
+                    <select id="schedule_end_time_ampm" aria-label="End time AM or PM" required>
+                      <option value="">AM/PM</option>
+                      <option value="am">AM</option>
+                      <option value="pm">PM</option>
+                    </select>
+                  </div>
+
+                  <input type="hidden" id="schedule_end_time" name="end_time" required />
                 </div>
 
                 <input type="hidden" id="schedule_course_id" name="course_id" required />
@@ -481,10 +537,38 @@ foreach ($eventTypes as $eventType) {
   color: #b71c1c;
 }
 
-.account-field-locked {
-  background: #f3f4f6;
-  color: #666;
+.account-field-locked,
+.tutoring-admin-form select.account-field-locked,
+.tutoring-admin-form select:disabled {
+  background: #f3f4f6 !important;
+  color: #666 !important;
   cursor: not-allowed;
+  opacity: 1;
+  border-color: #d1d5db;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.time-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.time-select-row select {
+  width: auto;
+  margin-top: 0;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.time-select-row select[id$="_hour"], 
+.time-select-row select[id$="_minute"], 
+.time-select-row select[id$="_ampm"] {
+  width: 8ch;
 }
 
 .admin-role-box {
