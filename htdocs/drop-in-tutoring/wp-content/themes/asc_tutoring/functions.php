@@ -253,7 +253,7 @@ if (!function_exists("wp_delete_user")) {
             }
         }
  
-        $curr_day_abbr    = get_day_abbr($now->format('D'));
+        $curr_day_abbr    = strtoupper($now->format('D'));
         $is_today         = ($curr_day_abbr === $day_of_week);
         $is_active_window = ($curr_time >= $start_time && $curr_time <= $end_time);
  
