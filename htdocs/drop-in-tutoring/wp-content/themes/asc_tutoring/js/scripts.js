@@ -538,9 +538,9 @@ const setScheduleCourseFieldsEditable = (editable) => {
   scheduleCourseFieldIds.forEach((id) => {
     const field = document.getElementById(id);
     if (!field) return;
-    field.readOnly = !editable;
+    field.readOnly = false;
     field.disabled = false;
-    field.classList.toggle('account-field-locked', !editable);
+    field.classList.remove('account-field-locked');
   });
 };
 
@@ -548,9 +548,8 @@ const setScheduleTimeDropdownsEditable = (editable) => {
   scheduleTimeDropdownIds.forEach((id) => {
     const field = document.getElementById(id);
     if (!field) return;
-
-    field.disabled = !editable;
-    field.classList.toggle('account-field-locked', !editable);
+    field.disabled = false;
+    field.classList.remove('account-field-locked');
   });
 };
 
@@ -635,12 +634,6 @@ const setScheduleFormMode = (mode) => {
     clearScheduleCourseFields();
     setTimeDropdowns('schedule_start_time', '');
     setTimeDropdowns('schedule_end_time', '');
-  } else {
-    const courseIdField = document.getElementById('schedule_course_id');
-    if (courseIdField) {
-      courseIdField.readOnly = true;
-      courseIdField.classList.add('account-field-locked');
-    }
   }
 };
 
@@ -697,7 +690,6 @@ const searchUmbcCourses = async (query) => {
             scheduleCourseLookup.prepend(opt);
         }
         fillScheduleFormFromCourse(course);
-        setScheduleFormMode('add');
         showMessage(`Selected course: ${course.course_subject} ${course.course_code} — ${course.course_name}`, 'success');
       };
 
@@ -790,17 +782,29 @@ const searchUmbcCourses = async (query) => {
 
   scheduleCourseLookup?.addEventListener('change', () => {
     if (!scheduleCourseLookup.value) {
-      clearScheduleCourseFields();
-      setScheduleFormMode('add');
+      const courseIdField = document.getElementById('schedule_course_id');
+      if (courseIdField) courseIdField.value = '';
       return;
+    }
+
+    const selectedOption = scheduleCourseLookup.options[scheduleCourseLookup.selectedIndex];
+    if (!selectedOption.dataset.newCourse) {
+      const newCourseOpt = scheduleCourseLookup.querySelector('option[data-new-course]');
+      if (newCourseOpt) newCourseOpt.remove();
+
+      const courseList = document.getElementById('course-search-list');
+      if (courseList) {
+        courseList.querySelectorAll('.account-search-item').forEach(el => el.classList.remove('selected'));
+      }
+      const courseLookupResults = document.getElementById('course_lookup_results');
+      if (courseLookupResults) courseLookupResults.value = '';
     }
 
     try {
       const course = JSON.parse(scheduleCourseLookup.value);
       fillScheduleFormFromCourse(course);
-      setScheduleFormMode('add');
     } catch (err) {
-      showMessage('Failed to load selected course.', 'error');
+      // 'new' or other non-JSON values are valid states (e.g. search selection), not errors
     }
   });
 
@@ -868,10 +872,6 @@ document.getElementById('course-search-submit')?.addEventListener('click', async
     showMessage('Please enter a search term.', 'error');
     return;
   }
-  const courseLookupResults = document.getElementById('course_lookup_results');
-  if (courseLookupResults) courseLookupResults.value = '';
-  clearScheduleCourseFields();
-  setScheduleFormMode('add');
   await searchUmbcCourses(query);
 });
 

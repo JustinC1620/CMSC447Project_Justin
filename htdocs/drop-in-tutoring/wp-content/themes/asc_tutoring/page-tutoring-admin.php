@@ -105,11 +105,7 @@ foreach ($eventTypes as $eventType) {
                   <label for="duration"><strong>Duration (minutes)</strong></label>
                   <select id="duration" name="duration">
                     <option value="">Select duration</option>
-                    <?php for ($m = 5; $m <= 60; $m += 5) : ?>
-                      <option value="<?php echo esc_attr($m); ?>">
-                        <?php echo esc_html($m); ?>
-                      </option>
-                    <?php endfor; ?>
+                    <?php tutoring_minute_options(5); ?>
                   </select>
                 </div>
                 
@@ -173,7 +169,7 @@ foreach ($eventTypes as $eventType) {
               <div class="admin-grid">
                 <div>
                   <label for="schedule_user_id"><strong>Tutor</strong></label>
-                  <select id="schedule_user_id" name="user_id" required>
+                  <select id="schedule_user_id" name="user_id" required >
                     <option value="">Select tutor</option>
                     <?php foreach ($users as $user) : ?>
                       <?php if (in_array('tutor', (array) $user['roles'], true)) : ?>
@@ -187,7 +183,7 @@ foreach ($eventTypes as $eventType) {
 
                 <div>
                   <label for="schedule_course_lookup"><strong>Select Course</strong></label>
-                  <select id="schedule_course_lookup" name="schedule_course_lookup">
+                  <select id="schedule_course_lookup" name="schedule_course_lookup" required >
                     <option value="">Select a course</option>
                     <?php foreach ($mCourses as $course) : ?>
                       <option value="<?php echo esc_attr(json_encode($course)); ?>">
@@ -212,27 +208,30 @@ foreach ($eventTypes as $eventType) {
                 <div>
                   <label><strong>Start Time</strong></label>
                   <div class="time-select-row">
-                    <select id="schedule_start_time_hour" aria-label="Start time hour" required>
-                      <option value="">Hour</option>
-                      <?php for ($h = 1; $h <= 12; $h++) : ?>
-                        <option value="<?php echo esc_attr($h); ?>"><?php echo esc_html($h); ?></option>
-                      <?php endfor; ?>
-                    </select>
+                    <div class="time-select-col">
+                      <label for="schedule_start_time_hour" class="time-select-label">Hour</label>
+                      <select id="schedule_start_time_hour" aria-label="Start time hour" required>
+                        <option value="">-</option>
+                        <?php tutoring_hour_options(); ?>
+                      </select>
+                    </div>
 
-                    <select id="schedule_start_time_minute" aria-label="Start time minute" required>
-                      <option value="">Min</option>
-                      <?php for ($m = 0; $m < 60; $m += 5) : ?>
-                        <option value="<?php echo esc_attr(sprintf('%02d', $m)); ?>">
-                          <?php echo esc_html(sprintf('%02d', $m)); ?>
-                        </option>
-                      <?php endfor; ?>
-                    </select>
+                    <div class="time-select-col">
+                      <label for="schedule_start_time_minute" class="time-select-label">Minute</label>
+                      <select id="schedule_start_time_minute" aria-label="Start time minute" required>
+                        <option value="">-</option>
+                        <?php tutoring_minute_options(); ?>
+                      </select>
+                    </div>
 
-                    <select id="schedule_start_time_ampm" aria-label="Start time AM or PM" required>
-                      <option value="">AM/PM</option>
-                      <option value="am">AM</option>
-                      <option value="pm">PM</option>
-                    </select>
+                    <div class="time-select-col">
+                      <label for="schedule_start_time_ampm" class="time-select-label">AM/PM</label>
+                      <select id="schedule_start_time_ampm" aria-label="Start time AM or PM" required>
+                        <option value="">-</option>
+                        <option value="am">AM</option>
+                        <option value="pm">PM</option>
+                      </select>
+                    </div>
                   </div>
 
                   <input type="hidden" id="schedule_start_time" name="start_time" required />
@@ -241,27 +240,30 @@ foreach ($eventTypes as $eventType) {
                 <div>
                   <label><strong>End Time</strong></label>
                   <div class="time-select-row">
-                    <select id="schedule_end_time_hour" aria-label="End time hour" required>
-                      <option value="">Hour</option>
-                      <?php for ($h = 1; $h <= 12; $h++) : ?>
-                        <option value="<?php echo esc_attr($h); ?>"><?php echo esc_html($h); ?></option>
-                      <?php endfor; ?>
-                    </select>
+                    <div class="time-select-col">
+                      <label for="schedule_end_time_hour" class="time-select-label">Hour</label>
+                      <select id="schedule_end_time_hour" aria-label="End time hour" required>
+                        <option value="">-</option>
+                        <?php tutoring_hour_options(); ?>
+                      </select>
+                    </div>
 
-                    <select id="schedule_end_time_minute" aria-label="End time minute" required>
-                      <option value="">Min</option>
-                      <?php for ($m = 0; $m < 60; $m += 5) : ?>
-                        <option value="<?php echo esc_attr(sprintf('%02d', $m)); ?>">
-                          <?php echo esc_html(sprintf('%02d', $m)); ?>
-                        </option>
-                      <?php endfor; ?>
-                    </select>
+                    <div class="time-select-col">
+                      <label for="schedule_end_time_minute" class="time-select-label">Minute</label>
+                      <select id="schedule_end_time_minute" aria-label="End time minute" required>
+                        <option value="">-</option>
+                        <?php tutoring_minute_options(); ?>
+                      </select>
+                    </div>
 
-                    <select id="schedule_end_time_ampm" aria-label="End time AM or PM" required>
-                      <option value="">AM/PM</option>
-                      <option value="am">AM</option>
-                      <option value="pm">PM</option>
-                    </select>
+                    <div class="time-select-col">
+                      <label for="schedule_end_time_ampm" class="time-select-label">AM/PM</label>
+                      <select id="schedule_end_time_ampm" aria-label="End time AM or PM" required>
+                        <option value="">-</option>
+                        <option value="am">AM</option>
+                        <option value="pm">PM</option>
+                      </select>
+                    </div>
                   </div>
 
                   <input type="hidden" id="schedule_end_time" name="end_time" required />
@@ -444,8 +446,6 @@ foreach ($eventTypes as $eventType) {
     </article>
   </div>
 </main>
-
-<?php if ($is_staff || $is_admin) : ?>
   
 <style>
 .tutoring-admin-tabs,
@@ -495,8 +495,12 @@ foreach ($eventTypes as $eventType) {
 
 .admin-role-box {
   display: flex;
-  flex-direction: column;
+  align-items: flex-end;
+  flex-wrap: nowrap;
   gap: 8px;
+  border: 0;
+  padding: 0;
+  margin-inline: 0px;
 }
 
 .admin-details {
@@ -553,33 +557,36 @@ foreach ($eventTypes as $eventType) {
 
 .time-select-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
   flex-wrap: nowrap;
 }
 
+.time-select-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px 6px 6px 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.time-select-label {
+  font-weight: 500;
+  margin: 0;
+}
+
 .time-select-row select {
-  width: auto;
+  width: 100%;
   margin-top: 0;
-  padding: 4px 6px;
   text-align: center;
+  box-sizing: border-box;
 }
 
-.time-select-row select[id$="_hour"], 
-.time-select-row select[id$="_minute"], 
-.time-select-row select[id$="_ampm"] {
-  width: 8ch;
-}
-
-.admin-role-box {
-  border: 0;
-  padding: 0;
-}
 .admin-role-options {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
+  flex-wrap: nowrap;
+  width: 100%;
+  justify-content: space-between;
 }
 
 .admin-role-options label {
@@ -590,6 +597,7 @@ foreach ($eventTypes as $eventType) {
 }
 .admin-role-box input[type="checkbox"] {
   width: auto;
+  cursor: pointer;
 }
 
 .account-search-wrapper {
@@ -678,7 +686,5 @@ input[readonly] {
 }
 
 </style>
-
-<?php endif; ?>
 
 <?php get_footer(); ?>

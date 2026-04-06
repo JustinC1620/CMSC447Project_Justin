@@ -126,6 +126,21 @@ if (!function_exists("wp_delete_user")) {
         return display_snake_case(str_replace("asc", "ASC", implode(", ", $roles)) ?? "—");
     }
 
+    function tutoring_time_options($base, $max, $step) {
+        for ($m = $base; $m < $max; $m += $step) {
+            $val = sprintf('%02d', $m);
+            echo '<option value="' . esc_attr($val) . '">' . esc_html($val) . '</option>';
+        }
+    }
+
+    function tutoring_hour_options() {
+        tutoring_time_options(1, 13, 1);
+    }
+
+    function tutoring_minute_options($step = 15) {
+        tutoring_time_options(0, 60, $step);
+    }
+
     function flush_cache() {
         wp_cache_delete(U_SCHEDULE_CACHE_KEY, USER_CACHE_GROUP);
         wp_cache_delete(U_EVENTS_CACHE_KEY, USER_CACHE_GROUP);
@@ -260,7 +275,7 @@ if (!function_exists("wp_delete_user")) {
             return $make('Called Out', '#da2128', $icon_x, '');
         }
  
-        if (false || !$is_active_window) {
+        if (!$is_today || !$is_active_window) {
             return $make('Unavailable', '#212121', '', '');
         }
 
@@ -1023,8 +1038,8 @@ if (!function_exists("wp_delete_user")) {
     }
 
 
-    function sanitize_day_field($day) {
-        return DAYS_OF_WEEK[ucfirst(strtolower($day))] ?? false;
+    function sanitize_day_field($full_day) {
+        return array_search(ucwords(strtolower($full_day)), DAYS_OF_WEEK) ?: false;
     }
 
 
