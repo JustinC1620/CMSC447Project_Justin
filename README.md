@@ -1,5 +1,6 @@
 # CMSC447Project
 ## Description
+The UMBC ASC currently faces a problem with drop-in tutoring where students may come in during a time slot listed on the current ASC drop-in tutoring website but find the tutor absent due to late arrivals, leaving early, or call-out. The current drop-in tutoring schedule website displays a static schedule of tutoring slots by class, tutor, and time but does not have the capability for dynamic updates for daily schedule adjustments. While the ASC also uses TracCloud software to check in tutors and send alerts for canceled sessions, this information is not reflected on the public-facing UMBC page and TracCloud is unreliable. The ASC Dynamic Drop-In Tutoring Website is intended to be an improved version of the current UMBC website that displays available tutoring slots along with real-time statuses and alerts for specific tutors and times, updated automatically or directly by ASC staff. These improvements serve to keep students informed of schedule changes in real time so they can adjust their plans accordingly, minimize unnecessary visits to the ASC when tutoring is unavailable, and reduce the burden on front desk staff from redirecting students whose tutor is absent.
 
 ## Installation 
 Download XAMPP. https://www.apachefriends.org/ <br>
