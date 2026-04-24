@@ -1564,6 +1564,115 @@ function initAdminTableFilters() {
 }
 
 // =============================================================================
+// TABLE SORTING
+// =============================================================================
+
+function parseDisplayTimeForSort(text) {
+  const value = String(text || '').trim().toLowerCase();
+
+  if (value === 'noon') return 12 * 60;
+  if (value === 'midnight') return 0;
+
+  const match = value.match(/^(\d{1,2}):(\d{2})\s*(a\.m\.|p\.m\.|am|pm)$/);
+  if (!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const ampm = match[3];
+
+  if (ampm.startsWith('a') && hour === 12) hour = 0;
+  if (ampm.startsWith('p') && hour !== 12) hour += 12;
+
+  return hour * 60 + minute;
+}
+
+function getSortValue(row, columnIndex, headerLabel) {
+  const text = row.children[columnIndex]?.textContent.trim() || '';
+  const label = headerLabel.toLowerCase();
+
+  if (label === 'day') {
+    const dayOrder = {
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+    };
+
+    return dayOrder[text.toLowerCase()] || 999;
+  }
+
+  if (label.includes('time')) {
+    const parsedTime = parseDisplayTimeForSort(text);
+    if (parsedTime !== null) return parsedTime;
+  }
+
+  return text.toLowerCase();
+}
+
+function sortTable(table, columnIndex, ascending = true) {
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  const headerLabel = table.querySelectorAll('thead th')[columnIndex]?.childNodes[0]?.textContent.trim() || '';
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  rows.sort((a, b) => {
+    const aVal = getSortValue(a, columnIndex, headerLabel);
+    const bVal = getSortValue(b, columnIndex, headerLabel);
+
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      return ascending ? aVal - bVal : bVal - aVal;
+    }
+
+    return ascending
+      ? String(aVal).localeCompare(String(bVal), undefined, { numeric: true })
+      : String(bVal).localeCompare(String(aVal), undefined, { numeric: true });
+  });
+
+  rows.forEach(row => tbody.appendChild(row));
+}
+
+function addSortArrowsToTable(table) {
+  const headers = table.querySelectorAll('thead th');
+
+  headers.forEach((th, index) => {
+    // Skip Actions column
+    if (th.textContent.trim().toLowerCase() === 'actions') return;
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'table-sort-arrows';
+
+    wrapper.innerHTML = `
+      <button type="button" class="sort-up" aria-label="Sort ascending">▲</button>
+      <button type="button" class="sort-down" aria-label="Sort descending">▼</button>
+    `;
+
+    th.appendChild(wrapper);
+
+    const upBtn = wrapper.querySelector('.sort-up');
+    const downBtn = wrapper.querySelector('.sort-down');
+
+    upBtn.addEventListener('click', () => {
+      sortTable(table, index, true);   // ascending
+    });
+
+    downBtn.addEventListener('click', () => {
+      sortTable(table, index, false);  // descending
+    });
+  });
+}
+
+function initTableSorting() {
+  ['event-table', 'schedule-table', 'account-table'].forEach(tableId => {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    addSortArrowsToTable(table);
+  });
+}
+
+// =============================================================================
 // AUDIT LOGS
 // =============================================================================
 
@@ -1769,6 +1878,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initExpanders();
   initSubjectFilters();
   initAdminTableFilters();
+  initTableSorting();
   initAdminUI();
   initEventFields();
   initLogsUI();
