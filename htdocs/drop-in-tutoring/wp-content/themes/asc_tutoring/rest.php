@@ -222,7 +222,7 @@
             return new WP_Error(
                 "invalid_roles",
                 "Account must have at least one role.",
-                ["status" => 401]
+                ["status" => 400]
             );
         }
 
@@ -233,7 +233,7 @@
                 return new WP_Error(
                     "invalid_roles",
                     "\"$role\" is not a recognized role.",
-                    ["status" => 402]
+                    ["status" => 400]
                 );
             }
         }
@@ -242,7 +242,7 @@
             return new WP_Error(
                 "invalid_roles",
                 "ASC Admin cannot be assigned with other roles.",
-                ["status" => 403]
+                ["status" => 400]
             );
         }
 
