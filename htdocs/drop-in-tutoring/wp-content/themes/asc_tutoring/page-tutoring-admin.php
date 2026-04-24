@@ -48,6 +48,7 @@ foreach ($eventTypes as $eventType) {
               <button type="button" class="button button-primary admin-tab" data-tab="schedule">Schedule</button>
               <button type="button" class="button button-primary admin-tab" data-tab="accounts">Accounts</button>
               <button type="button" class="button button-primary admin-tab" data-tab="logs">Logs</button>
+              <button type="button" class="button button-primary admin-tab" data-tab="import">Import</button>
             <?php endif; ?>
           </nav>
 
@@ -451,7 +452,7 @@ foreach ($eventTypes as $eventType) {
             </div>
           </section>
           <?php endif; ?>
-        
+          
           <?php if ($is_admin) : ?>
             <section class="admin-section" id="admin-tab-logs">
               <h2>Audit Logs</h2>
@@ -461,10 +462,9 @@ foreach ($eventTypes as $eventType) {
               </p>
 
               <div class="admin-actions">
-                <button type="button" class="button button-primary" id="logs-fetch-btn">Fetch Logs</button>
-                <button type="button" class="button button-secondary" id="logs-export-btn" hidden>Export Logs</button>
-                <span class="tutoring-admin-message" id="logs-message" hidden></span>
-              </div>
+              <button type="button" class="button button-primary" id="logs-fetch-btn">Fetch Logs</button>
+              <span class="tutoring-admin-message" id="logs-message" hidden></span>
+            </div>
 
               <div class="logs-viewer" id="logs-viewer" hidden>
                 <div class="logs-nav">
@@ -485,6 +485,63 @@ foreach ($eventTypes as $eventType) {
               </div>
             </section>
           <?php endif; ?>
+          <?php if ($is_admin) : ?>
+          <section class="admin-section" id="admin-tab-import">
+            <h2>Import</h2>
+            <p>Import a tutoring schedule from a CSV file or remove all schedule entries for a specific course.</p>
+
+            <section class="admin-subsection">
+              <h3>Import Schedule</h3>
+              <p>Upload a CSV file to bulk import schedule entries. Download the template below to ensure your file is formatted correctly.</p>
+              <div class="admin-actions" style="margin-top: 0;">
+                <a href="#" class="button button-secondary" id="import-download-template">Download CSV Template</a>
+              </div>
+              <form class="tutoring-admin-form" id="import-form">
+                <div class="admin-grid">
+                  <div>
+                    <label for="csv_file"><strong>Select CSV File</strong></label>
+                    <input type="file" id="csv_file" name="csv_file" accept=".csv" />
+                  </div>
+                </div>
+                <div class="admin-actions">
+                  <button type="submit" class="button button-primary">Upload</button>
+                  <span class="tutoring-admin-message" id="import-message" hidden></span>
+                </div>
+              </form>
+            </section>
+
+            <section class="admin-subsection">
+              <h3>Delete Schedule Entries by Course</h3>
+              <p>Select a course below and delete all associated schedule entries. This action cannot be undone.</p>
+              <div class="umbc-table-wrapper">
+                <table class="umbc-table admin-table" id="import-course-table">
+                  <thead>
+                    <tr>
+                      <th>Subject</th>
+                      <th>Course ID</th>
+                      <th>Course Name</th>
+                      <th>Times Offered</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php foreach ($mCourses as $course) : ?>
+                      <tr data-course-id="<?php echo esc_attr($course['course_id']); ?>">
+                        <td><?php echo esc_html($course['course_subject']); ?></td>
+                        <td><?php echo esc_html($course['course_subject'] . ' ' . $course['course_code']); ?></td>
+                        <td><?php echo esc_html($course['course_name']); ?></td>
+                        <td><?php echo esc_html($course['times_offered'] ?? '—'); ?></td>
+                        <td>
+                          <button type="button" class="button button-secondary admin-delete-course-schedule">Delete</button>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
     </article>
@@ -492,10 +549,6 @@ foreach ($eventTypes as $eventType) {
 </main>
 
 <style>
-[hidden] {
-  display: none !important;
-}
-
 .tutoring-admin-tabs,
 .admin-actions {
   display: flex;
@@ -568,7 +621,6 @@ input[type="date"] {
   border-radius: .25rem;
   padding: .25rem .5rem;
   margin: 0;
-  font-family: "Inter var", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 input[type="date" i]:focus {
