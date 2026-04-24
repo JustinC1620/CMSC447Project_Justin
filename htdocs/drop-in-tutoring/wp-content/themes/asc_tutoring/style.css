@@ -13779,15 +13779,15 @@ _:-ms-input-placeholder,
 
 .admin-table-filter {
   margin-bottom: 14px;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
 .admin-table-filter-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
-  padding: 4px 0;
+  padding: 2px 4px 2px 0;
 }
 
 .admin-table-filter-row > * {
@@ -13815,21 +13815,23 @@ _:-ms-input-placeholder,
 
 .admin-table-filter-search-wrap {
   position: relative;
-  flex: 1 1 260px;
-  min-width: 260px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .admin-table-filter-search-wrap .select2-container,
 .admin-table-filter-search-select {
   width: 100% !important;
+  max-width: 100%;
 }
 
 .admin-table-filter-row .button {
-  height: 36px;
-  padding: 0 12px;
-  margin-left: 4px;
+  height: 32px;
+  padding: 0 8px;
+  margin-left: 0;
   display: flex;
   align-items: center;
+  font-size: 13px;
 }
 
 .admin-table-filter-search {
@@ -13850,7 +13852,7 @@ _:-ms-input-placeholder,
   width: 16px;
   height: 16px;
   border: 1px solid #ccd0d4;
-  background: #ffffff;
+  background: #fff;
   color: #646970;
   font-size: 10px;
   line-height: 1;
@@ -13877,7 +13879,6 @@ _:-ms-input-placeholder,
   outline-offset: 1px;
 }
 
-/* Slightly tighten table spacing to fit sort arrows */
 .admin-section table th,
 .admin-section table td {
   padding: 3px 4px;
@@ -13887,13 +13888,11 @@ _:-ms-input-placeholder,
   padding: 3px 2px;
 }
 
-/* Keep Actions column intact */
 .admin-section th:last-child,
 .admin-section td:last-child {
   white-space: nowrap;
 }
 
-/* Reduce gap between Edit / Delete buttons */
 .admin-section td:last-child .button {
   margin-left: 2px;
   padding: 0 8px;
