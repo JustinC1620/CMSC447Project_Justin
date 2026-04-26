@@ -42,18 +42,49 @@ if (!function_exists("wp_delete_user")) {
 require_once get_template_directory() . "/rest.php";
 require_once get_template_directory() . "/rest-import.php";
 
-add_action("wp_enqueue_scripts", function() {
-    wp_enqueue_style(
-        "select2",
-        "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css",
+add_action('wp_enqueue_scripts', function() {
+    $template = get_page_template_slug();
+    $is_tutoring_admin = $template === 'page-tutoring-admin.php';
+    $is_tutoring       = $template === 'page-tutoring.php';
+
+    if (!$is_tutoring_admin && !$is_tutoring) return;
+
+    // --- Shared: always loaded on both pages ---
+
+    wp_enqueue_script(
+        'shared',
+        get_template_directory_uri() . '/js/shared.js',
         [],
-        "4.1.0"
+        '1.0',
+        true
+    );
+
+    // --- Drop-In Tutoring page ---
+
+    if ($is_tutoring) {
+        wp_enqueue_script(
+            'drop-in-tutoring',
+            get_template_directory_uri() . '/js/drop-in-tutoring.js',
+            ['shared'],
+            '1.0',
+            true
+        );
+        return;
+    }
+
+    // --- Tutoring Admin page ---
+
+    wp_enqueue_style(
+        'select2',
+        'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+        [],
+        '4.1.0'
     );
     wp_enqueue_script(
-        "select2",
-        "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js",
-        ["jquery"],
-        "4.1.0",
+        'select2',
+        'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+        ['jquery'],
+        '4.1.0',
         true
     );
     wp_enqueue_style(
@@ -69,23 +100,27 @@ add_action("wp_enqueue_scripts", function() {
         '4.6.13',
         true
     );
+
     wp_enqueue_script(
-        'scripts',
-        get_template_directory_uri() . '/js/scripts.js',
-        ['select2', 'flatpickr'],
+        'asc-staff',
+        get_template_directory_uri() . '/js/asc-staff.js',
+        ['shared', 'select2', 'flatpickr'],
         '1.0',
         true
     );
-    wp_localize_script("scripts", "wpApiSettings", [
-        "nonce" => wp_create_nonce("wp_rest"),
-        "root"  => esc_url_raw(rest_url()),
+    wp_localize_script('asc-staff', 'wpApiSettings', [
+        'nonce' => wp_create_nonce('wp_rest'),
+        'root'  => esc_url_raw(rest_url()),
     ]);
-});
 
-add_action("login_init", function() {
-    if (isset($_GET["SAMLResponse"])) {
-        wp_redirect(home_url());
-        exit;
+    if (current_user_can('admin_control')) {
+        wp_enqueue_script(
+            'asc-admin',
+            get_template_directory_uri() . '/js/asc-admin.js',
+            ['asc-staff'],
+            '1.0',
+            true
+        );
     }
 });
 

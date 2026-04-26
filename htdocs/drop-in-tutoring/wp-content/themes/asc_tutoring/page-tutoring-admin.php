@@ -402,7 +402,7 @@ foreach ($eventTypes as $eventType) {
                 <p>Upload a formatted CSV to replace all subjects, courses, tutors, and schedule entries. The file will be validated before any changes are made.</p>
                 <div class="admin-actions" style="margin-top: 0;">
                   <a href="#" class="button button-secondary" id="import-download-template">&#8595; Download Template</a>
-                  <a href="#" class="button button-secondary" id="import-export-db">&#8593; Export Current Database</a>
+                  <a href="#" class="button button-secondary" id="import-export-db">&#8595; Export Current Database</a>
                 </div>
                 <form class="tutoring-admin-form" id="import-form" style="margin-top: 1rem;">
                   <div class="admin-grid">

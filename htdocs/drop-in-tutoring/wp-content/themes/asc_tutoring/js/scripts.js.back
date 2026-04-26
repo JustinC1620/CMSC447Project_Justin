@@ -1735,7 +1735,6 @@ function initImportUI() {
 
   const fileInput       = $('csv_file');
   const uploadBtn       = $('import-upload-btn');
-  const importMessage   = $('import-message');
   const resultPanel     = $('import-result-panel');
   const errorPanel      = $('import-error-panel');
   const errorBox        = $('import-error-box');
@@ -1743,24 +1742,10 @@ function initImportUI() {
   const previewBox      = $('import-preview-box');
   const confirmBtn      = $('import-confirm-btn');
   const cancelBtn       = $('import-cancel-btn');
-  const wipeEventsChk   = $('import-wipe-events');
   const templateLink    = $('import-download-template');
   const exportLink      = $('import-export-db');
 
   let pendingToken = null;
-
-  // --- Local message helper (targets only the import message span) ---
-
-  function setImportMessage(text, type = '') {
-    if (!importMessage) return;
-    importMessage.textContent = text;
-    importMessage.className   = 'tutoring-admin-message' + (type ? ' ' + type : '');
-    importMessage.hidden      = !text;
-  }
-
-  function clearImportMessage() {
-    setImportMessage('');
-  }
 
   // --- Panel helpers ---
 
@@ -1867,12 +1852,12 @@ function initImportUI() {
 
   on(importForm, 'submit', async (e) => {
     e.preventDefault();
-    clearImportMessage();
+    clearMessages();
     hideResultPanels();
 
     const file = fileInput?.files[0];
     if (!file) {
-      setImportMessage('Please select a CSV file.', 'error');
+      showMessage('Please select a CSV file.', 'error');
       return;
     }
 
@@ -1893,7 +1878,7 @@ function initImportUI() {
       });
       data = await res.json().catch(() => ({}));
     } catch {
-      setImportMessage('Network error. Please try again.', 'error');
+      showMessage('Network error. Please try again.', 'error');
       if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Validate & Preview'; }
       return;
     }
@@ -1902,7 +1887,7 @@ function initImportUI() {
 
     // REST-level error (permission denied, server crash, etc.)
     if (data.code && data.message) {
-      setImportMessage(data.message, 'error');
+      showMessage(data.message, 'error');
       return;
     }
 
@@ -1911,7 +1896,7 @@ function initImportUI() {
     if (data.status === 'error') {
       if (errorPanel) errorPanel.hidden = false;
       renderErrors(data.errors);
-      setImportMessage(
+      showMessage(
         `Validation failed \u2014 ${data.errors.length} issue${pluralSuffix(data.errors.length)} found.`,
         'error'
       );
@@ -1919,9 +1904,9 @@ function initImportUI() {
       pendingToken = data.token;
       if (successPanel) successPanel.hidden = false;
       renderPreview(data.preview);
-      setImportMessage('Validation passed. Review the summary and confirm to import.', 'success');
+      showMessage('Validation passed. Review the summary and confirm to import.', 'success');
     } else {
-      setImportMessage('Unexpected response from server.', 'error');
+      showMessage('Unexpected response from server.', 'error');
     }
   });
 
@@ -1929,7 +1914,7 @@ function initImportUI() {
 
   on(cancelBtn, 'click', () => {
     hideResultPanels();
-    clearImportMessage();
+    clearMessages();
     if (fileInput) fileInput.value = '';
   });
 
@@ -1937,7 +1922,7 @@ function initImportUI() {
 
   on(confirmBtn, 'click', async () => {
     if (!pendingToken) {
-      setImportMessage('No pending import. Please re-upload the CSV.', 'error');
+      showMessage('No pending import. Please re-upload the CSV.', 'error');
       return;
     }
 
@@ -1945,7 +1930,7 @@ function initImportUI() {
       confirmBtn.disabled    = true;
       confirmBtn.textContent = 'Importing\u2026';
     }
-    clearImportMessage();
+    clearMessages();
 
     let data;
     try {
@@ -1953,7 +1938,7 @@ function initImportUI() {
         token: pendingToken,
       });
     } catch (err) {
-      setImportMessage('Import failed: ' + err.message, 'error');
+      showMessage('Import failed: ' + err.message, 'error');
       if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Import'; }
       return;
     }
@@ -1964,7 +1949,7 @@ function initImportUI() {
       const imp = data.imported;
       hideResultPanels();
       if (fileInput) fileInput.value = '';
-      setImportMessage(
+      showMessage(
         `Import successful \u2014 ` +
         `${imp.subjects} subject${pluralSuffix(imp.subjects)}, ` +
         `${imp.courses} course${pluralSuffix(imp.courses)}, ` +
@@ -1973,7 +1958,7 @@ function initImportUI() {
         'success'
       );
     } else {
-      setImportMessage('Import failed. Please try again or contact an administrator.', 'error');
+      showMessage('Import failed. Please try again or contact an administrator.', 'error');
     }
   });
 }
