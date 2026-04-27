@@ -26,68 +26,6 @@
         return new WP_Error($code, $msg, ["status" => $status]);
     }
 
-    function format_audit_data($fields) {
-        $escaped = array_map(function($v) {
-            if ($v === null) return "NULL";
-            return '"' . str_replace('"', '""', $v) . '"';
-        }, $fields);
-        return implode(",", $escaped);
-    }
-
-    function format_audit_roles($roles) {
-        return implode(",", array_intersect($roles, [TUTOR_ROLE, STAFF_ROLE, ADMIN_ROLE]));
-    }
-
-    function resolve_user_name($user_id) {
-        global $wpdb;
-        return $wpdb->get_var($wpdb->prepare(
-            "SELECT CONCAT(
-                COALESCE(MAX(CASE WHEN meta_key = 'first_name' THEN meta_value END), ''),
-                ' ',
-                COALESCE(MAX(CASE WHEN meta_key = 'last_name'  THEN meta_value END), '')
-            )
-            FROM {$wpdb->usermeta}
-            WHERE user_id = %d
-            AND meta_key IN ('first_name', 'last_name')",
-            $user_id
-        ));
-    }
-
-    function resolve_schedule_audit_fields($course_id, $user_id) {
-        global $wpdb;
-        $course_label = $wpdb->get_var($wpdb->prepare(
-            "SELECT CONCAT(course_subject, ' ', course_code) FROM courses WHERE course_id = %d",
-            $course_id
-        ));
-        return [$course_label, resolve_user_name($user_id)];
-    }
-
-    function resolve_event_audit_fields($event_type_id, $user_id) {
-        global $wpdb;
-        $event_type_name = $wpdb->get_var($wpdb->prepare(
-            "SELECT event_name FROM event_types WHERE event_type_id = %d",
-            $event_type_id
-        ));
-        return [$event_type_name, resolve_user_name($user_id)];
-    }
-
-    function insert_audit_log($action, $table_name, $table_key, $old_data, $new_data) {
-        global $wpdb;
-        $curr_user = wp_get_current_user();
-        return $wpdb->insert(
-            "audit_log",
-            [
-                "user_login" => $curr_user->user_login . ", " . $curr_user->user_firstname . " " . $curr_user->user_lastname,
-                "action"     => $action,
-                "table_name" => $table_name,
-                "table_key"  => $table_key,
-                "old_data"   => $old_data,
-                "new_data"   => $new_data,
-            ],
-            ["%s", "%s", "%s", "%s", "%s", "%s"]
-        ) !== false;
-    }
-
     function validate_positive_int($param, $request, $key) {
         if (!is_numeric($param) || (int) $param <= 0) {
             return new WP_Error(
@@ -151,15 +89,15 @@
         return DateTime::createFromFormat("Y-m-d", (string) $param)->format("Y-m-d");
     }
 
-    function normalize_event_params($event_type, &$final_day, &$duration) {
+    function normalize_event_params($event_type, &$final_day, &$leaving_time) {
         if ($event_type != EVENT_TYPES["leaving_early"]) {
             $duration = null;
         }
         if ($event_type != EVENT_TYPES["called_out"]) {
             $final_day = null;
         }
-        if ($duration === "" || $duration === "null") {
-            $duration = null;
+        if ($leaving_time === "" || $leaving_time === "null") {
+            $leaving_time = null;
         }
     }
 
@@ -344,6 +282,147 @@
         wp_cache_delete(M_COURSES_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
         wp_cache_delete(M_USERS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
     }
+
+
+    function format_audit_data($fields) {
+        $escaped = array_map(function($v) {
+            if ($v === null) return "NULL";
+            return '"' . str_replace('"', '""', $v) . '"';
+        }, $fields);
+        return implode(",", $escaped);
+    }
+
+    function format_audit_role($value) {
+        return str_replace('Asc', 'ASC', snake_to_capital_words($value));
+    }
+
+    function format_audit_roles($roles) {
+        return implode(" | ", array_map(
+            'format_audit_role',
+            array_intersect($roles, [TUTOR_ROLE, STAFF_ROLE, ADMIN_ROLE])
+        ));
+    }
+
+    function resolve_user_name($user_id) {
+        global $wpdb;
+        return $wpdb->get_var($wpdb->prepare(
+            "SELECT CONCAT(
+                COALESCE(MAX(CASE WHEN meta_key = 'first_name' THEN meta_value END), ''),
+                ' ',
+                COALESCE(MAX(CASE WHEN meta_key = 'last_name'  THEN meta_value END), '')
+            )
+            FROM {$wpdb->usermeta}
+            WHERE user_id = %d
+            AND meta_key IN ('first_name', 'last_name')",
+            $user_id
+        ));
+    }
+
+    function resolve_schedule_audit_fields($course_id, $user_id) {
+        global $wpdb;
+        $course_label = $wpdb->get_var($wpdb->prepare(
+            "SELECT CONCAT(course_subject, ' ', course_code) FROM courses WHERE course_id = %d",
+            $course_id
+        ));
+        return [$course_label, resolve_user_name($user_id)];
+    }
+
+    function resolve_event_audit_fields($event_type_id, $user_id) {
+        global $wpdb;
+        $event_type_name = $wpdb->get_var($wpdb->prepare(
+            "SELECT event_name FROM event_types WHERE event_type_id = %d",
+            $event_type_id
+        ));
+        return [$event_type_name, resolve_user_name($user_id)];
+    }
+
+    function insert_audit_log($action, $table_name, $table_key, $old_data, $new_data) {
+        global $wpdb;
+        $curr_user = wp_get_current_user();
+        return $wpdb->insert(
+            "audit_log",
+            [
+                "user_login" => $curr_user->user_login . ", " . $curr_user->user_firstname . " " . $curr_user->user_lastname,
+                "action"     => $action,
+                "table_name" => $table_name,
+                "table_key"  => $table_key,
+                "old_data"   => $old_data,
+                "new_data"   => $new_data,
+            ],
+            ["%s", "%s", "%s", "%s", "%s", "%s"]
+        ) !== false;
+    }
+
+    function parse_audit_csv($csv) {
+        if ($csv === null) return [];
+        $fields = [];
+        $len    = strlen($csv);
+        $i      = 0;
+        while ($i < $len) {
+            if ($csv[$i] === '"') {
+                $i++;
+                $val = "";
+                while ($i < $len) {
+                    if ($csv[$i] === '"' && isset($csv[$i + 1]) && $csv[$i + 1] === '"') {
+                        $val .= '"';
+                        $i  += 2;
+                    } elseif ($csv[$i] === '"') {
+                        $i++;
+                        break;
+                    } else {
+                        $val .= $csv[$i++];
+                    }
+                }
+                $fields[] = $val;
+                if ($i < $len && $csv[$i] === ',') $i++;
+            } else {
+                $start = $i;
+                while ($i < $len && $csv[$i] !== ',') $i++;
+                $raw      = substr($csv, $start, $i - $start);
+                $fields[] = $raw === "NULL" ? null : $raw;
+                if ($i < $len && $csv[$i] === ',') $i++;
+            }
+        }
+        return $fields;
+    }
+
+    function diff_audit_fields($old_fields, $new_fields) {
+        $changes = [];
+        $count   = max(count($old_fields), count($new_fields));
+        for ($i = 0; $i < $count; $i++) {
+            $old = $old_fields[$i] ?? null;
+            $new = $new_fields[$i] ?? null;
+            if ($old === $new) continue;
+            if ($old === null || $new === null) continue;
+            $changes[] = "$old -> $new";
+        }
+        return $changes;
+    }
+
+    function format_log_time($timestamp) {
+        return (new DateTime($timestamp))->format("H:i:s");
+    }
+
+    function format_log_actor($user_login, $requester_roles) {
+        $known_roles = [ADMIN_ROLE => "admin", STAFF_ROLE => "staff"];
+        foreach ($known_roles as $role => $label) {
+            if (in_array($role, $requester_roles, true)) {
+                return "$label ($user_login)";
+            }
+        }
+        return "UNKNOWN ($user_login)";
+    }
+
+    function get_log_actor_roles($user_login_field) {
+        $login = explode(", ", $user_login_field, 2)[0];
+        $user  = get_user_by("login", $login);
+        if (!$user) return [];
+        return array_intersect((array) $user->roles, [TUTOR_ROLE, STAFF_ROLE, ADMIN_ROLE]);
+    }
+
+    function snake_to_capital_words($value) {
+        return implode(" ", array_map("ucfirst", explode("_", $value)));
+    }
 }
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -455,10 +534,10 @@
                 "default"           => null,
                 "validate_callback" => function($param, $request, $key) {
                     if ($param === null || $param === "") return true;
-                    return validate_positive_int($param, $request, $key);
+                    return validate_time_field($param, $request, $key);
                 },
                 "sanitize_callback" => function($param) {
-                    return ($param === null || $param === "") ? null : absint($param);
+                    return ($param === null || $param === "") ? null :sanitize_time_field($param);
                 },
             ],
         ];
@@ -550,6 +629,39 @@
             "methods"             => "GET",
             "callback"            => "get_audit_logs",
             "permission_callback" => function() { return current_user_can("admin_control"); },
+        ]);
+    });
+
+    // umbc_db REST API
+    add_action("rest_api_init", function() {
+        register_rest_route("asc-tutoring/v1", "/umbc_db/accounts", [
+            "methods"             => "GET",
+            "callback"            => "get_umbc_accounts",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
+            },
+            "args" => [
+                "search_str" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_text_field",
+                    "default"           => "",
+                ]
+            ],
+        ]);
+
+        register_rest_route("asc-tutoring/v1", "/umbc_db/courses", [
+            "methods"             => "GET",
+            "callback"            => "get_umbc_courses",
+            "permission_callback" => function() {
+                return current_user_can("admin_control");
+            },
+            "args" => [
+                "search_str" => [
+                    "required"          => false,
+                    "sanitize_callback" => "sanitize_text_field",
+                    "default"           => "",
+                ]
+            ],
         ]);
     });
 }
@@ -746,29 +858,28 @@
     function create_event(WP_REST_Request $request) {
         global $wpdb;
 
-        $event_type = $request->get_param("event_type");
-        $user_id    = $request->get_param("user_id");
-        $start_day  = $request->get_param("start_day");
-        $final_day  = $request->get_param("final_day");
-        $duration   = $request->get_param("duration");
+        $event_type    = $request->get_param("event_type");
+        $user_id       = $request->get_param("user_id");
+        $start_day     = $request->get_param("start_day");
+        $final_day     = $request->get_param("final_day");
+        $leaving_time  = $request->get_param("leaving_time");
 
-        normalize_event_params($event_type, $final_day, $duration);
+        normalize_event_params($event_type, $final_day, $leaving_time);
 
         $validated = validate_event_dates($start_day, $final_day);
         if (is_wp_error($validated)) return $validated;
 
         $wpdb->query("START TRANSACTION");
-
         $result = $wpdb->insert(
             "events",
             [
-                "event_type" => $event_type,
-                "user_id"    => $user_id,
-                "start_day"  => $start_day,
-                "final_day"  => $final_day,
-                "duration"   => $duration,
+                "event_type"     => $event_type,
+                "user_id"        => $user_id,
+                "start_day"      => $start_day,
+                "final_day"      => $final_day,
+                "leaving_time"   => $leaving_time,
             ],
-            ["%d", "%d", "%s", "%s", "%d"]
+            ["%d", "%d", "%s", "%s", "%s"]
         );
 
         if ($result === false) return rollback_error("db_error", $wpdb->last_error);
@@ -776,7 +887,7 @@
         $event_id = $wpdb->insert_id;
         [$new_event_type_name, $new_user_name] = resolve_event_audit_fields($event_type, $user_id);
         $logged = insert_audit_log("CRE", "events", $event_id, null,
-            format_audit_data([$new_user_name, $new_event_type_name, $start_day, $final_day, $duration]));
+            format_audit_data([$new_user_name, $new_event_type_name, $start_day, $final_day, $leaving_time]));
 
         if (!$logged) return rollback_error("db_error", "Failed to write audit log");
 
@@ -795,7 +906,7 @@
         $wpdb->query("START TRANSACTION");
 
         $old_row = $wpdb->get_row($wpdb->prepare(
-            "SELECT u.ID, et.event_name, e.start_day, e.final_day, e.duration
+            "SELECT u.ID, et.event_name, e.start_day, e.final_day, e.leaving_time
              FROM events e
              JOIN event_types et    ON e.event_type = et.event_type_id
              JOIN {$wpdb->users} u  ON e.user_id    = u.ID
@@ -830,15 +941,15 @@
         $user_id    = $request->get_param("user_id");
         $start_day  = $request->get_param("start_day");
         $final_day  = $request->get_param("final_day");
-        $duration   = $request->get_param("duration");
+        $leaving_time   = $request->get_param("leaving_time");
 
-        normalize_event_params($event_type, $final_day, $duration);
+        normalize_event_params($event_type, $final_day, $leaving_time);
 
         $validated = validate_event_dates($start_day, $final_day);
         if (is_wp_error($validated)) return $validated;
 
         $old_row = $wpdb->get_row($wpdb->prepare(
-            "SELECT u.ID, et.event_name, e.start_day, e.final_day, e.duration
+            "SELECT u.ID, et.event_name, e.start_day, e.final_day, e.leaving_time
              FROM events e
              JOIN event_types et    ON e.event_type = et.event_type_id
              JOIN {$wpdb->users} u  ON e.user_id    = u.ID
@@ -853,14 +964,14 @@
         $result = $wpdb->update(
             "events",
             [
-                "event_type" => $event_type,
-                "user_id"    => $user_id,
-                "start_day"  => $start_day,
-                "final_day"  => $final_day,
-                "duration"   => $duration,
+                "event_type"     => $event_type,
+                "user_id"        => $user_id,
+                "start_day"      => $start_day,
+                "final_day"      => $final_day,
+                "leaving_time"   => $leaving_time,
             ],
             ["event_id" => $event_id],
-            ["%d", "%d", "%s", "%s", "%d"],
+            ["%d", "%d", "%s", "%s", "%s"],
             ["%d"]
         );
 
@@ -870,7 +981,7 @@
         $old_user_name = resolve_user_name($old_row["ID"]);
         $logged = insert_audit_log("MOD", "events", $event_id,
             format_audit_data([$old_user_name, ...array_slice($old_row, 1)]),
-            format_audit_data([$new_user_name, $new_event_type_name, $start_day, $final_day, $duration]));
+            format_audit_data([$new_user_name, $new_event_type_name, $start_day, $final_day, $leaving_time]));
 
         if (!$logged) return rollback_error("db_error", "Failed to write audit log");
 
@@ -1036,6 +1147,94 @@
 }
 //---------------------------------------------------------------------------------------------------------------------
 
+// Audit Log Callbacks
+//---------------------------------------------------------------------------------------------------------------------
+{    
+    function format_log_entry($row) {
+        $time      = format_log_time($row["time_stamp"]);
+        $roles     = get_log_actor_roles($row["user_login"]);
+        $actor     = format_log_actor($row["user_login"], $roles);
+        $table     = $row["table_name"];
+        $action    = $row["action"];
+        $old_data  = $row["old_data"];
+        $new_data  = $row["new_data"];
+        $date_key  = (new DateTime($row["time_stamp"]))->format("Y-m-d");
+
+        $table_label = match($table) {
+            "schedule" => "schedule entry",
+            "events"   => "event",
+            "wp_users" => "account",
+            default    => $table,
+        };
+        $action_label = match($action) {
+            "CRE" => "CREATED",
+            "DEL" => "DELETED",
+            "MOD" => "EDITED",
+            default => $action,
+        };
+
+        $role = in_array(ADMIN_ROLE, $roles, true) ? "admin"
+              : (in_array(STAFF_ROLE, $roles, true) ? "staff" : "unknown");
+
+        $format_fields = function(array $fields) use ($table): array {
+            return array_filter(
+                array_map(fn($v) => $v === null ? null : ($table === "events" ? snake_to_capital_words($v) : $v), $fields),
+                fn($v) => $v !== null
+            );
+        };
+
+        $data_line = $action === "DEL"
+            ? implode(", ", $format_fields(parse_audit_csv($old_data)))
+            : implode(", ", $format_fields(parse_audit_csv($new_data)));
+
+        $lines = ["[$date_key $time] $actor $action_label $table_label:\n" . str_repeat(" ", 22) . $data_line];
+
+        if ($action === "MOD" && $old_data !== null && $new_data !== null) {
+            $old_fields = parse_audit_csv($old_data);
+            $new_fields = parse_audit_csv($new_data);
+            $changes    = diff_audit_fields($old_fields, $new_fields);
+            if (!empty($changes) && $table === "events") {
+                $changes = array_map(function($change) {
+                    [$from, $to] = explode(" -> ", $change, 2);
+                    return snake_to_capital_words($from) . " -> " . snake_to_capital_words($to);
+                }, $changes);
+            }
+            if (!empty($changes)) {
+                $lines[] = str_repeat(" ", 22) . "Changed: " . implode(", ", $changes);
+            }
+        }
+
+        return [
+            "date"         => $date_key,
+            "action_label" => $action_label,
+            "table_label"  => $table_label,
+            "user"         => $actor,
+            "role"         => $role,
+            "lines"        => $lines,
+        ];
+    }
+
+    function get_audit_logs(WP_REST_Request $request) {
+        global $wpdb;
+
+        $rows = $wpdb->get_results(
+            "SELECT user_login, action, table_name, table_key, old_data, new_data, time_stamp
+             FROM audit_log
+             ORDER BY time_stamp DESC",
+            ARRAY_A
+        );
+
+        if ($rows === null) {
+            return new WP_Error("db_error", "Failed to retrieve audit log", ["status" => 500]);
+        }
+
+        $entries = array_map("format_log_entry", $rows);
+
+        return rest_ensure_response(["success" => true, "logs" => $entries]);
+    }
+}
+//---------------------------------------------------------------------------------------------------------------------
+
 // umbc_db Callbacks
 //---------------------------------------------------------------------------------------------------------------------
 {
@@ -1101,160 +1300,6 @@
         }
 
         return rest_ensure_response(["success" => true, "umbc_accounts" => $accounts]);
-    }
-}
-//---------------------------------------------------------------------------------------------------------------------
-
-// Audit Log Callbacks
-//---------------------------------------------------------------------------------------------------------------------
-{
-    function parse_audit_csv($csv) {
-        if ($csv === null) return [];
-        $fields = [];
-        $len    = strlen($csv);
-        $i      = 0;
-        while ($i < $len) {
-            if ($csv[$i] === '"') {
-                $i++;
-                $val = "";
-                while ($i < $len) {
-                    if ($csv[$i] === '"' && isset($csv[$i + 1]) && $csv[$i + 1] === '"') {
-                        $val .= '"';
-                        $i  += 2;
-                    } elseif ($csv[$i] === '"') {
-                        $i++;
-                        break;
-                    } else {
-                        $val .= $csv[$i++];
-                    }
-                }
-                $fields[] = $val;
-                if ($i < $len && $csv[$i] === ',') $i++;
-            } else {
-                $start = $i;
-                while ($i < $len && $csv[$i] !== ',') $i++;
-                $raw      = substr($csv, $start, $i - $start);
-                $fields[] = $raw === "NULL" ? null : $raw;
-                if ($i < $len && $csv[$i] === ',') $i++;
-            }
-        }
-        return $fields;
-    }
-
-    function diff_audit_fields($old_fields, $new_fields) {
-        $changes = [];
-        $count   = max(count($old_fields), count($new_fields));
-        for ($i = 0; $i < $count; $i++) {
-            $old = $old_fields[$i] ?? null;
-            $new = $new_fields[$i] ?? null;
-            if ($old === $new) continue;
-            if ($old === null || $new === null) continue;
-            $changes[] = "$old -> $new";
-        }
-        return $changes;
-    }
-
-    function format_log_time($timestamp) {
-        return (new DateTime($timestamp))->format("H:i:s");
-    }
-
-    function format_log_actor($user_login, $requester_roles) {
-        $known_roles = [ADMIN_ROLE => "admin", STAFF_ROLE => "staff"];
-        foreach ($known_roles as $role => $label) {
-            if (in_array($role, $requester_roles, true)) {
-                return "$label ($user_login)";
-            }
-        }
-        return "UNKNOWN ($user_login)";
-    }
-
-    function get_log_actor_roles($user_login_field) {
-        $login = explode(", ", $user_login_field, 2)[0];
-        $user  = get_user_by("login", $login);
-        if (!$user) return [];
-        return array_intersect((array) $user->roles, [TUTOR_ROLE, STAFF_ROLE, ADMIN_ROLE]);
-    }
-
-    function snake_to_capital_words($value) {
-        return implode(" ", array_map("ucfirst", explode("_", $value)));
-    }
-
-    function format_log_entry($row) {
-        $time      = format_log_time($row["time_stamp"]);
-        $roles     = get_log_actor_roles($row["user_login"]);
-        $actor     = format_log_actor($row["user_login"], $roles);
-        $table     = $row["table_name"];
-        $action    = $row["action"];
-        $old_data  = $row["old_data"];
-        $new_data  = $row["new_data"];
-        $date_key  = (new DateTime($row["time_stamp"]))->format("Y-m-d");
-
-        $table_label = match($table) {
-            "schedule" => "schedule entry",
-            "events"   => "event",
-            "wp_users" => "account",
-            default    => $table,
-        };
-        $action_label = match($action) {
-            "CRE" => "CREATED",
-            "DEL" => "DELETED",
-            "MOD" => "EDITED",
-            default => $action,
-        };
-
-        $format_fields = function(array $fields) use ($table): array {
-            return array_filter(
-                array_map(fn($v) => $v === null ? null : ($table === "events" ? snake_to_capital_words($v) : $v), $fields),
-                fn($v) => $v !== null
-            );
-        };
-
-        $data_line = $action === "DEL"
-            ? implode(", ", $format_fields(parse_audit_csv($old_data)))
-            : implode(", ", $format_fields(parse_audit_csv($new_data)));
-
-        $lines = ["[$date_key $time] $actor $action_label $table_label:\n" . str_repeat(" ", 22) . $data_line];
-
-        if ($action === "MOD" && $old_data !== null && $new_data !== null) {
-            $old_fields = parse_audit_csv($old_data);
-            $new_fields = parse_audit_csv($new_data);
-            $changes    = diff_audit_fields($old_fields, $new_fields);
-            if (!empty($changes) && $table === "events") {
-                $changes = array_map(function($change) {
-                    [$from, $to] = explode(" -> ", $change, 2);
-                    return snake_to_capital_words($from) . " -> " . snake_to_capital_words($to);
-                }, $changes);
-            }
-            if (!empty($changes)) {
-                $lines[] = str_repeat(" ", 22) . "Changed: " . implode(", ", $changes);
-            }
-        }
-
-        return [
-            "date"   => $date_key,
-            "action" => $action,
-            "table"  => $table,
-            "lines"  => $lines,
-        ];
-    }
-
-    function get_audit_logs(WP_REST_Request $request) {
-        global $wpdb;
-
-        $rows = $wpdb->get_results(
-            "SELECT user_login, action, table_name, table_key, old_data, new_data, time_stamp
-             FROM audit_log
-             ORDER BY time_stamp DESC",
-            ARRAY_A
-        );
-
-        if ($rows === null) {
-            return new WP_Error("db_error", "Failed to retrieve audit log", ["status" => 500]);
-        }
-
-        $entries = array_map("format_log_entry", $rows);
-
-        return rest_ensure_response(["success" => true, "logs" => $entries]);
     }
 }
 //---------------------------------------------------------------------------------------------------------------------

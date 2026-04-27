@@ -1,7 +1,6 @@
 <?php
 /**
  * Shared tutoring sidebar.
- * Put this in your theme as sidebar-tutoring.php.
  */
 ?>
 <div class="sidebar">

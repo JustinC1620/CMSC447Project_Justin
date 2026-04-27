@@ -40,39 +40,112 @@ if (!function_exists("wp_delete_user")) {
 }
 
 require_once get_template_directory() . "/rest.php";
+require_once get_template_directory() . "/rest-import.php";
 
-add_action("wp_enqueue_scripts", function() {
-    wp_enqueue_style(
-        "select2",
-        "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css",
+add_action('wp_enqueue_scripts', function() {
+    $template = get_page_template_slug();
+    $is_tutoring_admin = $template === 'page-tutoring-admin.php';
+    $is_tutoring       = $template === 'page-tutoring.php';
+
+    if (!$is_tutoring_admin && !$is_tutoring) return;
+
+    // --- Shared: always loaded on both pages ---
+
+    wp_enqueue_script(
+        'shared',
+        get_template_directory_uri() . '/js/shared.js',
         [],
-        "4.1.0"
-    );
-    wp_enqueue_script(
-        "select2",
-        "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js",
-        ["jquery"],
-        "4.1.0",
+        '1.0',
         true
     );
-    wp_enqueue_script(
-        "scripts",
-        get_template_directory_uri() . "/js/scripts.js",
-        ["select2"],
-        "1.0",
-        true
-    );
-    wp_localize_script("scripts", "wpApiSettings", [
-        "nonce" => wp_create_nonce("wp_rest"),
-        "root"  => esc_url_raw(rest_url()),
-    ]);
-});
 
-add_action("login_init", function() {
-    if (isset($_GET["SAMLResponse"])) {
-        wp_redirect(home_url());
-        exit;
+    wp_enqueue_style( 
+        'umbc-style', 
+        get_template_directory_uri() . '/css/umbc-style.css', 
+        false, 
+        '1.0', 
+        'all'
+    );
+
+    // --- Drop-In Tutoring page ---
+
+    if ($is_tutoring) {
+        wp_enqueue_script(
+            'drop-in-tutoring',
+            get_template_directory_uri() . '/js/drop-in-tutoring.js',
+            ['shared'],
+            '1.0',
+            true
+        );
+        wp_enqueue_style( 
+            'drop-in-tutoring-style', 
+            get_template_directory_uri() . '/css/drop-in-tutoring-style.css', 
+            false, 
+            '1.0', 
+            'all'
+        );
+        return;
     }
+
+    // --- Tutoring Admin page ---
+
+    wp_enqueue_style(
+        'select2',
+        'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+        [],
+        '4.1.0'
+    );
+    wp_enqueue_script(
+        'select2',
+        'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+        ['jquery'],
+        '4.1.0',
+        true
+    );
+    wp_enqueue_style(
+        'flatpickr',
+        'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css',
+        [],
+        '4.6.13'
+    );
+    wp_enqueue_script(
+        'flatpickr',
+        'https://cdn.jsdelivr.net/npm/flatpickr',
+        [],
+        '4.6.13',
+        true
+    );
+
+    wp_enqueue_script(
+        'asc-staff',
+        get_template_directory_uri() . '/js/asc-staff.js',
+        ['shared', 'select2', 'flatpickr'],
+        '1.0',
+        true
+    );
+
+    if (current_user_can('admin_control')) {
+        wp_enqueue_script(
+            'asc-admin',
+            get_template_directory_uri() . '/js/asc-admin.js',
+            ['asc-staff'],
+            '1.0',
+            true
+        );
+    }
+
+    wp_enqueue_style( 
+        'tutoring-admin-style', 
+        get_template_directory_uri() . '/css/tutoring-admin-style.css', 
+        false, 
+        '1.0', 
+        'all'
+    );
+
+    wp_localize_script('asc-staff', 'wpApiSettings', [
+        'nonce' => wp_create_nonce('wp_rest'),
+        'root'  => esc_url_raw(rest_url()),
+    ]);
 });
 
 add_action("after_setup_theme", function() {
@@ -87,6 +160,12 @@ add_filter("login_redirect", function($redirect_to, $request, $user) {
     return home_url();
 }, 10, 3);
 
+add_action("login_init", function() {
+    if (isset($_GET["SAMLResponse"])) {
+        wp_redirect(home_url());
+        exit;
+    }
+});
 
 // Utility Functions
 //---------------------------------------------------------------------------------------------------------------------
@@ -231,17 +310,13 @@ add_filter("login_redirect", function($redirect_to, $request, $user) {
         $is_today = ($curr_day === $day_of_week);
 
         if ($le_event !== null && $is_today) {
-            $duration = isset($le_event["duration"]) ? (int) $le_event["duration"] : null;
+            $leaving_time = $le_event["leaving_time"] ?? null;
 
-            if ($duration !== null && $duration > 0) {
-                $departure_time = (new DateTime($curr_date . " " . $end_time))
-                    ->modify("-{$duration} minutes")
-                    ->format("H:i:s");
-
-                if ($curr_time >= $departure_time) {
+            if ($leaving_time !== null) {
+                if ($curr_time >= $leaving_time) {
                     $has_left = true;
                 } else {
-                    $le_note = "Leaving {$duration} minutes early";
+                    $le_note = "Leaving early at " . tutoring_admin_time_label($leaving_time);
                 }
             } else {
                 $le_note = "Leaving early";
@@ -335,7 +410,7 @@ add_filter("login_redirect", function($redirect_to, $request, $user) {
                 e.event_type,
                 e.start_day,
                 e.final_day,
-                e.duration,
+                e.leaving_time,
                 et.event_type_id,
                 et.event_name
             FROM events e
@@ -397,7 +472,7 @@ add_filter("login_redirect", function($redirect_to, $request, $user) {
                 "event_type_id" => $row->event_type_id,
                 "start_day"     => $row->start_day,
                 "final_day"     => $row->final_day,
-                "duration"      => $row->duration,
+                "leaving_time"      => $row->leaving_time,
             ];
         }
 
@@ -536,7 +611,7 @@ add_filter("login_redirect", function($redirect_to, $request, $user) {
                 event_type,
                 start_day,
                 final_day,
-                duration
+                leaving_time
             FROM events
             ORDER BY user_id DESC
         ");
@@ -634,7 +709,7 @@ add_filter("login_redirect", function($redirect_to, $request, $user) {
                 "event_type" => $row->event_type,
                 "start_day"  => $row->start_day,
                 "final_day"  => $row->final_day,
-                "duration"   => $row->duration,
+                "leaving_time"   => $row->leaving_time,
             ];
         }
 

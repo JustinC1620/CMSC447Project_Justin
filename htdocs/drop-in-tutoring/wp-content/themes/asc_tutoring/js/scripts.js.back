@@ -2,8 +2,10 @@
 // UTILITY HELPERS
 // =============================================================================
 
-const $ = (id) => document.getElementById(id);
+const $  = (id)  => document.getElementById(id);
 const $$ = (sel) => document.querySelectorAll(sel);
+const qs = (sel) => document.querySelector(sel);
+
 const on = (el, event, handler) => el?.addEventListener(event, handler);
 
 const onEnter = (el, handler) => {
@@ -12,9 +14,9 @@ const onEnter = (el, handler) => {
   });
 };
 
-const setVal     = (id, value) => { const el = $(id); if (el) el.value = value; };
-const setHidden  = (id, hidden) => { const el = $(id); if (el) el.hidden = hidden; };
-const clearVal   = (id) => setVal(id, '');
+const setVal      = (id, value) => { const el = $(id); if (el) el.value = value; };
+const setHidden   = (id, hidden) => { const el = $(id); if (el) el.hidden = hidden; };
+const clearVal    = (id) => setVal(id, '');
 const clearFields = (ids) => ids.forEach(id => { const el = $(id); if (el) el.value = ''; });
 
 const toggleDisplay = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
@@ -30,6 +32,7 @@ function throttle(callback, limit) {
   };
 }
 
+
 // =============================================================================
 // DISPLAY FORMATTERS
 // =============================================================================
@@ -44,9 +47,9 @@ function formatDisplayTime(timeValue) {
   if (!timeValue) return '';
   const match = String(timeValue).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*((?:a|p)\.m\.))?$/i);
   if (!match) return timeValue;
-  let hour   = parseInt(match[1], 10);
-  const min  = match[2];
-  let ampm   = match[3];
+  let hour  = parseInt(match[1], 10);
+  const min = match[2];
+  let ampm  = match[3];
   if (!ampm) {
     ampm = hour >= 12 ? 'p.m.' : 'a.m.';
     hour = hour % 12 || 12;
@@ -64,18 +67,18 @@ function formatDisplayRole(role) {
 // =============================================================================
 
 function findTableRow(tableId, attr, id) {
-  return document.querySelector(`#${tableId} tbody tr[data-${attr}="${id}"]`);
+  return qs(`#${tableId} tbody tr[data-${attr}="${id}"]`);
 }
 
 function removeTableRow(entityLabel, id) {
-  const attr = entityLabel !== 'account' ? entityLabel : 'user';
+  const attr    = entityLabel !== 'account' ? entityLabel : 'user';
   const tableId = `${entityLabel}-table`;
   findTableRow(tableId, `${attr}-id`, id)?.remove();
   reapplyTableFilter(tableId);
 }
 
 function upsertTableRow(tableId, attr, id, rowHTML) {
-  const tbody = document.querySelector(`#${tableId} tbody`);
+  const tbody = qs(`#${tableId} tbody`);
   if (!tbody) return;
 
   const temp = document.createElement('tbody');
@@ -105,50 +108,25 @@ const EVENT_TYPE_KEYS = {
   '4': 'at_capacity',
 };
 
-function buildEventRow(e) {
-  const typeKey      = EVENT_TYPE_KEYS[e.event_type];
-  const finalDay     = typeKey === 'called_out'    ? formatDisplayDate(e.final_day) : '-';
-  const duration     = typeKey === 'leaving_early' ? e.duration                     : '-';
+const DAY_ABBR   = { Monday: 'MON', Tuesday: 'TUE', Wednesday: 'WED', Thursday: 'THU', Friday: 'FRI' };
+const DAY_UNABBR = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday' };
 
-  const userRow  = document.querySelector(`#account-table tr[data-user-id="${e.user_id}"]`);
+function resolveUserLabel(userId, fallback) {
+  if (fallback) return fallback;
+  const userRow  = qs(`#account-table tr[data-user-id="${userId}"]`);
   const nameCell = userRow?.children[1]?.textContent?.trim();
   const idCell   = userRow?.children[0]?.textContent?.trim();
-  const userLabel = nameCell ? `${nameCell}${idCell ? ` (${idCell})` : ''}` : String(e.user_id);
-
-  const typeOption   = document.querySelector(`#event_type option[value="${e.event_type}"]`);
-  const eventTypeLabel = typeOption ? typeOption.textContent.trim() : String(e.event_type);
-
-  return `
-    <tr
-      data-event-id="${e.event_id}"
-      data-user-id="${e.user_id}"
-      data-event-type="${e.event_type}"
-      data-start-day="${e.start_day}"
-      data-final-day="${e.final_day || ''}"
-      data-duration="${e.duration || ''}"
-    >
-      <td>${userLabel}</td>
-      <td>${eventTypeLabel}</td>
-      <td>${formatDisplayDate(e.start_day)}</td>
-      <td>${finalDay}</td>
-      <td>${duration}</td>
-      <td>
-        <button type="button" class="button button-primary admin-edit-event">Edit</button>
-        <button type="button" class="button button-secondary admin-delete-event">Delete</button>
-      </td>
-    </tr>`;
+  return nameCell ? `${nameCell}${idCell ? ` (${idCell})` : ''}` : String(userId);
 }
-
-const DAY_ABBR = { Monday: 'MON', Tuesday: 'TUE', Wednesday: 'WED', Thursday: 'THU', Friday: 'FRI' };
 
 function resolveCourseLabel(courseId, schedule) {
   if (schedule.course_label) return schedule.course_label;
 
-  const existingRow = document.querySelector(`#schedule-table tbody tr[data-course-id="${courseId}"]`);
+  const existingRow = qs(`#schedule-table tbody tr[data-course-id="${courseId}"]`);
   if (existingRow) return existingRow.children[1]?.textContent?.trim() || String(courseId);
 
   try {
-    const raw = document.getElementById('course_lookup_results')?.value;
+    const raw = $('course_lookup_results')?.value;
     if (raw) {
       const c = JSON.parse(raw);
       if (String(c.course_id) === String(courseId)) {
@@ -160,12 +138,34 @@ function resolveCourseLabel(courseId, schedule) {
   return String(courseId);
 }
 
-function resolveUserLabel(userId, fallback) {
-  if (fallback) return fallback;
-  const userRow  = document.querySelector(`#account-table tr[data-user-id="${userId}"]`);
-  const nameCell = userRow?.children[1]?.textContent?.trim();
-  const idCell   = userRow?.children[0]?.textContent?.trim();
-  return nameCell ? `${nameCell}${idCell ? ` (${idCell})` : ''}` : String(userId);
+function buildEventRow(e) {
+  const typeKey     = EVENT_TYPE_KEYS[e.event_type];
+  const finalDay    = typeKey === 'called_out'    ? formatDisplayDate(e.final_day) : '--';
+  const leavingTime = typeKey === 'leaving_early' ? e.leaving_time                 : '--';
+
+  const userLabel      = resolveUserLabel(e.user_id);
+  const typeOption     = qs(`#event_type option[value="${e.event_type}"]`);
+  const eventTypeLabel = typeOption ? typeOption.textContent.trim() : String(e.event_type);
+
+  return `
+    <tr
+      data-event-id="${e.event_id}"
+      data-user-id="${e.user_id}"
+      data-event-type="${e.event_type}"
+      data-start-day="${e.start_day}"
+      data-final-day="${e.final_day || ''}"
+      data-leaving-time="${e.leaving_time || ''}"
+    >
+      <td>${userLabel}</td>
+      <td>${eventTypeLabel}</td>
+      <td>${formatDisplayDate(e.start_day)}</td>
+      <td>${finalDay}</td>
+      <td>${formatDisplayTime(leavingTime)}</td>
+      <td>
+        <button type="button" class="button button-primary admin-edit-event">Edit</button>
+        <button type="button" class="button button-secondary admin-delete-event">Delete</button>
+      </td>
+    </tr>`;
 }
 
 function buildScheduleRow(s) {
@@ -214,6 +214,7 @@ function buildAccountRow(a) {
     </tr>`;
 }
 
+
 // =============================================================================
 // API CLIENT
 // =============================================================================
@@ -230,7 +231,7 @@ const api = {
 
   async request(endpoint, method = 'GET', body = null) {
     const options = { method, headers: this.headers() };
-    if (body)            options.body = JSON.stringify(body);
+    if (body)             options.body = JSON.stringify(body);
     if (method === 'GET') delete options.headers['Content-Type'];
 
     const res  = await fetch(`${this.root}/asc-tutoring/v1${endpoint}`, options);
@@ -240,12 +241,13 @@ const api = {
   },
 };
 
+
 // =============================================================================
 // SLIDE ANIMATIONS
 // =============================================================================
 
 const applyStyles  = (el, styles) => Object.assign(el.style, styles);
-const removeStyles = (el, props) => props.forEach(p => el.style.removeProperty(p));
+const removeStyles = (el, props)  => props.forEach(p => el.style.removeProperty(p));
 
 const SLIDE_CLEANUP_PROPS = [
   'height', 'padding-top', 'padding-bottom',
@@ -261,7 +263,7 @@ const DOMAnimations = {
         transitionProperty: 'height, margin, padding',
         transitionDuration: `${duration}ms`,
       });
-      element.offsetHeight;
+      element.offsetHeight; // force reflow
       applyStyles(element, { overflow: 'hidden', height: '0', paddingTop: '0', paddingBottom: '0', marginTop: '0', marginBottom: '0' });
       setTimeout(() => {
         element.style.display = 'none';
@@ -294,6 +296,7 @@ const DOMAnimations = {
   },
 };
 
+
 // =============================================================================
 // EXPANDERS
 // =============================================================================
@@ -315,6 +318,7 @@ function initExpanders() {
   });
 }
 
+
 // =============================================================================
 // SUBJECT FILTERS
 // =============================================================================
@@ -333,6 +337,7 @@ function initSubjectFilters() {
   });
 }
 
+
 // =============================================================================
 // NAVIGATION
 // =============================================================================
@@ -341,10 +346,10 @@ const MENU_DURATION = 300;
 
 const menuItemsWithChildren = $$('.top-level > .sub-menu li.menu-item-has-children:not(.sub-menu .sub-menu li.menu-item-has-children), li.top-level.menu-item-has-children');
 const topLevelMenuItems     = $$('.top-level');
-const menuToggle            = document.querySelector('.menu-toggle');
-const wholeMenu             = document.querySelector('#primary-menu');
-const menuToggleContent     = document.querySelector('.menu-toggle .menu-toggle-content');
-const navigationWrapper     = document.querySelector('.navigation-wrapper');
+const menuToggle            = qs('.menu-toggle');
+const wholeMenu             = qs('#primary-menu');
+const menuToggleContent     = qs('.menu-toggle .menu-toggle-content');
+const navigationWrapper     = qs('.navigation-wrapper');
 
 let windowWidth;
 let touchmoved;
@@ -382,8 +387,8 @@ menuToggle.addEventListener('click', (e) => {
   navigationWrapper.classList.toggle('open');
   document.body.classList.toggle('mobile-menu-open');
 
-  const mobileLink  = document.querySelector('.mobile-header-title a');
-  const logoWrapper = document.querySelector('.umbc-logo-wrapper');
+  const mobileLink  = qs('.mobile-header-title a');
+  const logoWrapper = qs('.umbc-logo-wrapper');
 
   if (isExpanded) {
     mobileLink?.setAttribute('tabindex', -1);
@@ -427,10 +432,10 @@ function enableDesktopNavigation() {
   const docWidth = window.innerWidth;
 
   menuItemsWithChildren.forEach(menu => {
-    const rect             = menu.getBoundingClientRect();
-    const hasSubMenus      = menu.querySelectorAll('.sub-menu').length > 1;
-    const subMenuWidth     = menu.querySelector('.sub-menu').getBoundingClientRect().width + 16;
-    const totalWidth       = hasSubMenus ? subMenuWidth * 2 : subMenuWidth;
+    const rect         = menu.getBoundingClientRect();
+    const hasSubMenus  = menu.querySelectorAll('.sub-menu').length > 1;
+    const subMenuWidth = menu.querySelector('.sub-menu').getBoundingClientRect().width + 16;
+    const totalWidth   = hasSubMenus ? subMenuWidth * 2 : subMenuWidth;
     menu.classList.toggle('too-wide', rect.x + totalWidth > docWidth);
   });
 
@@ -553,11 +558,11 @@ function enableMobileNavigation() {
   });
 }
 
+
 // =============================================================================
-// ADMIN PANEL
+// ADMIN PANEL — MESSAGES
 // =============================================================================
 
-// --- Success/Error Messages
 const messageBoxes = $$('.tutoring-admin-message');
 
 const showMessage = (text, type = 'success') => {
@@ -567,7 +572,6 @@ const showMessage = (text, type = 'success') => {
     box.hidden      = false;
     setTimeout(() => { box.hidden = true; }, 4000);
   });
-
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
@@ -579,118 +583,66 @@ const clearMessages = () => {
   });
 };
 
-// --- Time Dropdown Helpers ---------------------------------------
 
-function setTimeDropdowns(prefix, timeValue) {
-  const hourField   = $(`${prefix}_hour`);
-  const minuteField = $(`${prefix}_minute`);
-  const ampmField   = $(`${prefix}_ampm`);
-  const hiddenField = $(prefix);
-  if (!hourField || !minuteField || !ampmField || !hiddenField) return;
+// =============================================================================
+// ADMIN PANEL — FLATPICKR TIME HELPERS
+// =============================================================================
 
-  if (!timeValue) {
-    [hourField, minuteField, ampmField, hiddenField].forEach(f => { f.value = ''; });
-    return;
-  }
-
-  const match = String(timeValue).trim().toLowerCase()
-    .match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*((?:a|p)\.m\.))?$/);
-  if (!match) return;
-
-  let hour   = parseInt(match[1], 10);
-  const min  = match[2];
-  let ampm   = match[3];
-
-  if (!ampm) {
-    ampm = hour >= 12 ? 'p.m.' : 'a.m.';
-    hour = hour % 12 || 12;
-  }
-
-  const paddedHour  = String(hour).padStart(2, '0');
-  hourField.value   = paddedHour;
-  minuteField.value = min;
-  ampmField.value   = ampm;
-  hiddenField.value = `${paddedHour}:${min} ${ampm}`;
+// Converts a HH:MM:SS or HH:MM 24hr string to a Date object flatpickr can use
+function timeStringToDate(timeValue) {
+  if (!timeValue) return null;
+  const match = String(timeValue).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if (!match) return null;
+  const d = new Date();
+  d.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
+  return d;
 }
 
-function updateHiddenTimeField(prefix) {
-  const hour        = $(`${prefix}_hour`)?.value   || '';
-  const minute      = $(`${prefix}_minute`)?.value || '';
-  const ampm        = $(`${prefix}_ampm`)?.value   || '';
-  const hiddenField = $(prefix);
-  if (!hiddenField) return;
-
-  if (!hour || !minute || !ampm) { hiddenField.value = ''; return; }
-
-  let hour24 = parseInt(hour, 10);
-  if (ampm === 'a.m.' && hour24 === 12) hour24 = 0;
-  if (ampm === 'p.m.' && hour24 !== 12) hour24 += 12;
-
-  hiddenField.value = `${String(hour24).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+// Sets a flatpickr instance's value from a HH:MM:SS / HH:MM 24hr string
+function setFlatpickrTime(instanceOrId, timeValue) {
+  const fp = typeof instanceOrId === 'string'
+    ? $(instanceOrId)?._flatpickr
+    : instanceOrId;
+  if (!fp) return;
+  const d = timeStringToDate(timeValue);
+  if (d) { fp.setDate(d, true); } else { fp.clear(); }
 }
 
-function bindTimeDropdowns(prefix) {
-  ['hour', 'minute', 'ampm'].forEach(part => {
-    $(`${prefix}_${part}`)?.addEventListener('change', () => updateHiddenTimeField(prefix));
+// Reads a flatpickr instance and returns a 24hr HH:MM:SS string, or null if empty
+function getFlatpickrTimeString(id) {
+  const fp = $(id)?._flatpickr;
+  if (!fp?.selectedDates.length) return null;
+  const d  = fp.selectedDates[0];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}:00`;
+}
+
+function initFlatpickrTimePickers() {
+  if (typeof flatpickr === 'undefined') return;
+
+  const FLATPICKR_CONFIG = {
+    enableTime:      true,
+    noCalendar:      true,
+    minuteIncrement: 15,
+    time_24hr:       false,
+    allowInput:      false,
+    dateFormat:      'h:i K',
+    static:          true,
+  };
+
+  ['leaving_time_picker', 'schedule_start_time_picker', 'schedule_end_time_picker'].forEach(id => {
+    const el = $(id);
+    if (el) flatpickr(el, { ...FLATPICKR_CONFIG });
   });
 }
 
-// --- Form Load Helpers ------------------------------------------
 
-function loadEventIntoForm(row, setEventFormMode) {
-  s2set('event_type',    row.dataset.eventType);
-  toggleEventFields();
-  setVal('event_id',      row.dataset.eventId);
-  s2set('event_user_id', row.dataset.userId);
-  setVal('start_day',     row.dataset.startDay);
-  setVal('final_day',     row.dataset.finalDay);
-  s2set('duration',      row.dataset.duration ? row.dataset.duration.padStart(2, '0') : '');
-  setEventFormMode('edit');
-}
+// =============================================================================
+// ADMIN PANEL — UMBC SEARCH
+// =============================================================================
 
-function loadScheduleIntoForm(row, setScheduleFormMode, scheduleCourseLookup) {
-  const DAY_UNABBR = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday' };
-
-  setVal('schedule_id',          row.dataset.scheduleId);
-  s2set('schedule_user_id',      row.dataset.userId);
-  setVal('schedule_course_id',   row.dataset.courseId);
-  s2set('schedule_day_of_week',  DAY_UNABBR[row.dataset.dayOfWeek] || '');
-  setTimeDropdowns('schedule_start_time', row.dataset.startTime);
-  setTimeDropdowns('schedule_end_time',   row.dataset.endTime);
-
-  if (scheduleCourseLookup) {
-    const courseId = String(row.dataset.courseId);
-    const matched  = Array.from(scheduleCourseLookup.options).find(opt => {
-      try { return String(JSON.parse(opt.value).course_id) === courseId; } catch (_) { return false; }
-    });
-    s2set('schedule_course_lookup', matched ? matched.value : '');
-  }
-
-  setScheduleFormMode('edit');
-}
-
-function loadAccountIntoForm(row, accountForm, accountLookupResults, setAccountFormMode) {
-  const roles = (row.dataset.roles || '').split(',').map(r => r.trim().toLowerCase()).filter(Boolean);
-
-  setVal('account_user_id', row.dataset.userId);
-  setVal('user_login',      row.dataset.userLogin || '');
-  setVal('user_email',      row.dataset.userEmail || '');
-  setVal('first_name',      row.dataset.firstName || '');
-  setVal('last_name',       row.dataset.lastName  || '');
-
-  accountForm.querySelectorAll('input[name="roles[]"]').forEach(cb => {
-    cb.checked = roles.includes(cb.value.toLowerCase());
-  });
-
-  if (accountLookupResults) accountLookupResults.value = '';
-  clearVal('account_search_query');
-  setHidden('account_search_results', true);
-  setAccountFormMode('edit');
-}
-
-// --- UMBC Search UI --------------------------------------------
-
-async function searchUmbc({ endpoint, resultsBoxId, statusElId, listElId, collectionKey, renderItem, onSelect, getLabel, showMessage }) {
+async function searchUmbc({ endpoint, resultsBoxId, statusElId, listElId, collectionKey, renderItem, onSelect, getLabel }) {
   const resultsBox = $(resultsBoxId);
   const statusEl   = $(statusElId);
   const listEl     = $(listElId);
@@ -733,10 +685,8 @@ async function searchUmbc({ endpoint, resultsBoxId, statusElId, listElId, collec
   }
 }
 
-// --- Lookup Table Binding ---------------------------------------
-
-function bindLookupForm({ formId, queryId, resultsId, endpoint, collectionKey, headers, buildRow, showMessage }) {
-  $(formId)?.addEventListener('submit', async (e) => {
+function bindLookupForm({ formId, queryId, resultsId, endpoint, collectionKey, headers, buildRow }) {
+  on($(formId), 'submit', async (e) => {
     e.preventDefault();
     const query = $(queryId).value.trim();
     const box   = $(resultsId);
@@ -759,42 +709,82 @@ function bindLookupForm({ formId, queryId, resultsId, endpoint, collectionKey, h
   });
 }
 
-// --- Main Admin Init -------------------------------------------
 
-function initAdminUI() {
-  // --- Tabs ---
+// =============================================================================
+// ADMIN PANEL — FORM LOAD HELPERS
+// =============================================================================
 
-  $$('.admin-tab').forEach(tab => {
-    on(tab, 'click', () => {
+function loadEventIntoForm(row, setEventFormMode) {
+  s2set('event_type',   row.dataset.eventType);
+  toggleEventFields();
+  setVal('event_id',    row.dataset.eventId);
+  s2set('event_user_id', row.dataset.userId);
+  setVal('start_day',   row.dataset.startDay);
+  setVal('final_day',   row.dataset.finalDay);
+  setFlatpickrTime('leaving_time_picker', row.dataset.leavingTime || '');
+  setEventFormMode('edit');
+}
 
-      clearMessages();
+function loadScheduleIntoForm(row, setScheduleFormMode, scheduleCourseLookup) {
+  setVal('schedule_id',         row.dataset.scheduleId);
+  s2set('schedule_user_id',     row.dataset.userId);
+  setVal('schedule_course_id',  row.dataset.courseId);
+  s2set('schedule_day_of_week', DAY_UNABBR[row.dataset.dayOfWeek] || '');
+  setFlatpickrTime('schedule_start_time_picker', row.dataset.startTime);
+  setFlatpickrTime('schedule_end_time_picker',   row.dataset.endTime);
 
-      $$('.admin-tab').forEach(t => t.classList.remove('active'));
-      $$('.admin-section').forEach(s => s.classList.remove('active'));
-
-      tab.classList.add('active');
-      $(`admin-tab-${tab.dataset.tab}`)?.classList.add('active');
+  if (scheduleCourseLookup) {
+    const courseId = String(row.dataset.courseId);
+    const matched  = Array.from(scheduleCourseLookup.options).find(opt => {
+      try { return String(JSON.parse(opt.value).course_id) === courseId; } catch (_) { return false; }
     });
+    s2set('schedule_course_lookup', matched ? matched.value : '');
+  }
+
+  setScheduleFormMode('edit');
+}
+
+function loadAccountIntoForm(row, accountForm, accountLookupResults, setAccountFormMode) {
+  const roles = (row.dataset.roles || '').split(',').map(r => r.trim().toLowerCase()).filter(Boolean);
+
+  setVal('account_user_id', row.dataset.userId);
+  setVal('user_login',      row.dataset.userLogin || '');
+  setVal('user_email',      row.dataset.userEmail || '');
+  setVal('first_name',      row.dataset.firstName || '');
+  setVal('last_name',       row.dataset.lastName  || '');
+
+  accountForm.querySelectorAll('input[name="roles[]"]').forEach(cb => {
+    cb.checked = roles.includes(cb.value.toLowerCase());
   });
 
-  // --- Form references ---
+  if (accountLookupResults) accountLookupResults.value = '';
+  clearVal('account_search_query');
+  setHidden('account_search_results', true);
+  setAccountFormMode('edit');
+}
+
+
+// =============================================================================
+// ADMIN PANEL — MAIN INIT
+// =============================================================================
+
+function initAdminUI() {
   const scheduleForm         = $('schedule-form');
   const eventForm            = $('event-form');
   const accountForm          = $('account-form');
   const scheduleCourseLookup = $('schedule_course_lookup');
   const accountLookupResults = $('account_lookup_results');
 
-  const SCHEDULE_FIELD_IDS      = ['schedule_user_id', 'schedule_course_id', 'schedule_day_of_week', 'schedule_start_time', 'schedule_end_time'];
-  const SCHEDULE_TIME_FIELD_IDS = ['schedule_start_time_hour', 'schedule_start_time_minute', 'schedule_start_time_ampm', 'schedule_end_time_hour', 'schedule_end_time_minute', 'schedule_end_time_ampm'];
-  const ACCOUNT_FIELD_IDS       = ['user_login', 'user_email', 'first_name', 'last_name'];
+  const SCHEDULE_FIELD_IDS = ['schedule_user_id', 'schedule_course_id', 'schedule_day_of_week'];
+  const ACCOUNT_FIELD_IDS  = ['user_login', 'user_email', 'first_name', 'last_name'];
 
   // --- Form mode helpers ---
 
   const applyFormModeLabels = (labelId, resetId, isEdit, editLabel, addLabel) => {
-    const label = $(labelId);
-    if (label) label.textContent = isEdit ? editLabel : addLabel;
+    const label    = $(labelId);
     const resetBtn = $(resetId);
-    if (resetBtn) resetBtn.textContent = isEdit ? 'Cancel' : 'Clear';
+    if (label)    label.textContent    = isEdit ? editLabel : addLabel;
+    if (resetBtn) resetBtn.textContent = isEdit ? 'Cancel'  : 'Clear';
   };
 
   const unlockFields = (ids) => ids.forEach(id => {
@@ -807,7 +797,7 @@ function initAdminUI() {
 
   const setRolesEditable = (editable) => {
     accountForm.querySelectorAll('input[name="roles[]"]').forEach(cb => {
-      cb.disabled   = !editable;
+      cb.disabled     = !editable;
       cb.style.cursor = editable ? '' : 'not-allowed';
     });
   };
@@ -815,14 +805,26 @@ function initAdminUI() {
   const setAccountSearchEditable = (editable) => {
     const input = $('account_search_query');
     const btn   = $('account-search-submit');
-    if (input) {
-      input.disabled     = !editable;
-      input.style.cursor = editable ? '' : 'not-allowed';
-    }
-    if (btn) {
-      btn.disabled     = !editable;
-      btn.style.cursor = editable ? '' : 'not-allowed';
-    }
+    [input, btn].forEach(el => {
+      if (!el) return;
+      el.disabled     = !editable;
+      el.style.cursor = editable ? '' : 'not-allowed';
+    });
+  };
+
+  const setEventFormMode = (mode) => {
+    applyFormModeLabels('event-form-mode-label', 'reset-event-form', mode === 'edit', 'Editing Event', 'Create New Event');
+  };
+
+  const setScheduleFormMode = (mode) => {
+    const isEdit = mode === 'edit';
+    applyFormModeLabels('schedule-form-mode-label', 'reset-schedule-form', isEdit, 'Editing Schedule Entry', 'Create New Schedule Entry');
+    if (isEdit) { unlockFields(SCHEDULE_FIELD_IDS); return; }
+    const hasSelected = !!scheduleCourseLookup?.value;
+    if (hasSelected) { unlockFields(SCHEDULE_FIELD_IDS); return; }
+    clearFields(SCHEDULE_FIELD_IDS);
+    setFlatpickrTime('schedule_start_time_picker', '');
+    setFlatpickrTime('schedule_end_time_picker', '');
   };
 
   const setAccountFormMode = (mode) => {
@@ -835,56 +837,53 @@ function initAdminUI() {
     if (!hasSelected) clearFields(ACCOUNT_FIELD_IDS);
   };
 
-  const setScheduleFormMode = (mode) => {
-    const isEdit = mode === 'edit';
-    applyFormModeLabels('schedule-form-mode-label', 'reset-schedule-form', isEdit, 'Editing Schedule Entry', 'Create New Schedule Entry');
-    if (isEdit) { unlockFields(SCHEDULE_FIELD_IDS); unlockFields(SCHEDULE_TIME_FIELD_IDS); return; }
-    const hasSelected = !!scheduleCourseLookup?.value;
-    if (hasSelected) { unlockFields(SCHEDULE_FIELD_IDS); unlockFields(SCHEDULE_TIME_FIELD_IDS); return; }
-    clearFields(SCHEDULE_FIELD_IDS);
-    setTimeDropdowns('schedule_start_time', '');
-    setTimeDropdowns('schedule_end_time', '');
-  };
+  // --- Reset form functions ---
 
-  const setEventFormMode = (mode) => {
-    applyFormModeLabels('event-form-mode-label', 'reset-event-form', mode === 'edit', 'Editing Event', 'Create New Event');
-  };
+  function resetEventForm() {
+    eventForm.reset();
+    s2reset('event_user_id');
+    s2reset('event_type');
+    $('event_type').selectedIndex = 0;
+    clearVal('event_id');
+    setFlatpickrTime('leaving_time_picker', '');
+    toggleEventFields();
+    setEventFormMode('add');
+  }
 
   function resetScheduleForm() {
     scheduleForm.reset();
     s2reset('schedule_user_id');
     s2reset('schedule_course_lookup');
     s2reset('schedule_day_of_week');
-    setTimeDropdowns('schedule_start_time', '');
-    setTimeDropdowns('schedule_end_time', '');
-    $('schedule_id').value = '';
+    if (scheduleCourseLookup) scheduleCourseLookup.value = '';
+    scheduleCourseLookup?.querySelector('option[data-new-course]')?.remove();
+    clearVal('schedule_id');
+    clearVal('course_search_query');
+    clearVal('course_lookup_results');
+    clearFields(SCHEDULE_FIELD_IDS);
+    setFlatpickrTime('schedule_start_time_picker', '');
+    setFlatpickrTime('schedule_end_time_picker', '');
+    setHidden('course_search_results', true);
+    const courseList = $('course-search-list');
+    if (courseList) courseList.innerHTML = '';
     setScheduleFormMode('add');
-  }
-
-  function resetEventForm() {
-    eventForm.reset();
-    s2reset('event_user_id');
-    s2reset('event_type');
-    s2reset('duration');
-    $('event_type').selectedIndex = 0;
-    toggleEventFields();
-    $('event_id').value = '';
-    setEventFormMode('add');
   }
 
   function resetAccountForm() {
     accountForm.reset();
     clearVal('account_user_id');
-    if (accountLookupResults) accountLookupResults.value = '';
     clearVal('account_search_query');
+    if (accountLookupResults) accountLookupResults.value = '';
+    const accountSearchList = $('account-search-list');
+    if (accountSearchList) accountSearchList.innerHTML = '';
+    clearFields(ACCOUNT_FIELD_IDS);
     setHidden('account_search_results', true);
     setAccountFormMode('add');
   }
 
-  // --- Time dropdowns ---
+  // --- Tabs ---
 
-  bindTimeDropdowns('schedule_start_time');
-  bindTimeDropdowns('schedule_end_time');
+  initTabSwitching();
 
   // --- Edit buttons ---
 
@@ -920,12 +919,9 @@ function initAdminUI() {
       try {
         await api.request(buildEndpoint(id), 'DELETE');
         removeTableRow(entityLabel, id);
-        if (entityLabel === 'schedule') resetScheduleForm();
-        else if (entityLabel === 'event'   ) resetEventForm();
-        else if (entityLabel === 'account' ) {
-          removeTutorRelatedRows(id);
-          resetAccountForm();
-        }
+        if      (entityLabel === 'event'   ) resetEventForm();
+        else if (entityLabel === 'schedule') resetScheduleForm();
+        else if (entityLabel === 'account' ) { removeTutorRelatedRows(id); resetAccountForm(); }
         showMessage(`Deleted ${entityLabel} ${id}.`);
       } catch (err) {
         showMessage(err.message, 'error');
@@ -937,182 +933,56 @@ function initAdminUI() {
   bindDeleteButtons('.admin-delete-schedule', row => row.dataset.scheduleId, id => `/schedule/${id}`, 'schedule');
   bindDeleteButtons('.admin-delete-account',  row => row.dataset.userId,     id => `/accounts/${id}`, 'account');
 
-  // --- UMBC search buttons ---
+  // --- Reset buttons ---
 
-  const searchUmbcAccounts = (query) => searchUmbc({
-    endpoint:      `/umbc_db/accounts?search_str=${encodeURIComponent(query)}`,
-    resultsBoxId:  'account_search_results',
-    statusElId:    'account-search-status',
-    listElId:      'account-search-list',
-    collectionKey: 'umbc_accounts',
-    renderItem:    (a) => `
-      <span class="account-search-item-name">${a.first_name} ${a.last_name}</span>
-      <span class="account-search-item-meta">${a.umbc_id} &bull; ${a.umbc_email}</span>`,
-    onSelect: (account) => {
-      if (accountLookupResults) accountLookupResults.value = JSON.stringify(account);
-      setVal('user_login', account.umbc_id    || '');
-      setVal('user_email', account.umbc_email || '');
-      setVal('first_name', account.first_name || '');
-      setVal('last_name',  account.last_name  || '');
-      setAccountFormMode('add');
-    },
-    getLabel:    (a) => `${a.first_name} ${a.last_name} (${a.umbc_id})`,
-    showMessage,
+  on($('reset-event-form'),    'click', resetEventForm);
+  on($('reset-schedule-form'), 'click', resetScheduleForm);
+  on($('reset-account-form'),  'click', resetAccountForm);
+
+  // --- Event section ---
+
+  initEventSection(eventForm, setEventFormMode, resetEventForm);
+
+  // --- Schedule section ---
+
+  initScheduleSection(scheduleForm, scheduleCourseLookup, setScheduleFormMode, resetScheduleForm, SCHEDULE_FIELD_IDS);
+
+  // --- Account section ---
+
+  initAccountSection(accountForm, accountLookupResults, setAccountFormMode, resetAccountForm, ACCOUNT_FIELD_IDS);
+
+  // --- Lookup forms ---
+
+  initLookupForms();
+
+  // --- Set initial form modes ---
+
+  if (accountForm)  setAccountFormMode('add');
+  if (scheduleForm) setScheduleFormMode('add');
+}
+
+function initTabSwitching() {
+  $$('.admin-tab').forEach(tab => {
+    on(tab, 'click', () => {
+      clearMessages();
+      $$('.admin-tab').forEach(t => t.classList.remove('active'));
+      $$('.admin-section').forEach(s => s.classList.remove('active'));
+      tab.classList.add('active');
+      $(`admin-tab-${tab.dataset.tab}`)?.classList.add('active');
+    });
   });
+}
 
-  const searchUmbcCourses = (query) => searchUmbc({
-    endpoint:      `/umbc_db/courses?search_str=${encodeURIComponent(query)}`,
-    resultsBoxId:  'course_search_results',
-    statusElId:    'course-search-status',
-    listElId:      'course-search-list',
-    collectionKey: 'umbc_courses',
-    renderItem:    (c) => `
-      <span class="account-search-item-name">${c.course_subject} ${c.course_code} \u2014 ${c.course_name}</span>
-      <span class="account-search-item-meta">${c.subject_name}</span>`,
-    onSelect: (course) => {
-      const courseLookupResults = $('course_lookup_results');
-      if (courseLookupResults) courseLookupResults.value = JSON.stringify(course);
-      if (scheduleCourseLookup) {
-        scheduleCourseLookup.querySelector('option[data-new-course]')?.remove();
-        const opt      = document.createElement('option');
-        opt.value      = 'new';
-        opt.textContent = 'New Course Selected';
-        opt.dataset.newCourse = 'true';
-        opt.selected   = true;
-        scheduleCourseLookup.prepend(opt);
-
-        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
-          jQuery('#schedule_course_lookup').trigger('change');
-        }
-      }
-      setVal('schedule_course_id', course.course_id || '');
-    },
-    getLabel:    (c) => `${c.course_subject} ${c.course_code} \u2014 ${c.course_name}`,
-    showMessage,
-  });
-
-  on($('account-search-submit'), 'click', async () => {
-    const query = $('account_search_query').value.trim();
-    if (!query) { showMessage('Please enter a search term.', 'error'); return; }
-    if (accountLookupResults) accountLookupResults.value = '';
-    clearFields(ACCOUNT_FIELD_IDS);
-    setAccountFormMode('add');
-    await searchUmbcAccounts(query);
-  });
-
-  onEnter($('account_search_query'), () => $('account-search-submit')?.click());
-
-  on($('course-search-submit'), 'click', async () => {
-    const query = $('course_search_query').value.trim();
-    if (!query) { showMessage('Please enter a search term.', 'error'); return; }
-    await searchUmbcCourses(query);
-  });
-
-  onEnter($('course_search_query'), () => $('course-search-submit')?.click());
-
-  // --- Schedule form submit ---
-
-  scheduleForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    updateHiddenTimeField('schedule_start_time');
-    updateHiddenTimeField('schedule_end_time');
-
-    const startTime = $('schedule_start_time').value;
-    const endTime   = $('schedule_end_time').value;
-
-    if (endTime <= startTime) { showMessage('Error: End Time must be after Start Time.', 'error'); return; }
-    const id      = $('schedule_id').value.trim();
-    const payload = {
-      user_id:     Number($('schedule_user_id').value),
-      course_id:   Number($('schedule_course_id').value),
-      day_of_week: $('schedule_day_of_week').value,
-      start_time:  startTime,
-      end_time:    endTime,
-    };
-
-    try {
-      const courseLookupResults = $('course_lookup_results');
-      if (courseLookupResults?.value) {
-        const newCourse = JSON.parse(courseLookupResults.value);
-        if (newCourse.course_subject && newCourse.course_code && newCourse.course_name) {
-          Object.assign(payload, {
-            course_subject: newCourse.course_subject,
-            course_code:    newCourse.course_code,
-            course_name:    newCourse.course_name,
-            course_id:      newCourse.course_id,
-          });
-        }
-      }
-    } catch (_) {}
-
-    const existingScheduleRows = Array.from($$('#schedule-table tbody tr'));
-    for (const row of existingScheduleRows) {
-      if (id && row.dataset.scheduleId === id) continue; // skip self when editing
-      if (Number(row.dataset.userId)   !== payload.user_id)   continue;
-      if (Number(row.dataset.courseId) !== payload.course_id) continue;
-      const DAY_UNABBR = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday' };
-      const rowDay = DAY_UNABBR[row.dataset.dayOfWeek] || row.dataset.dayOfWeek;
-      if (rowDay !== payload.day_of_week) continue;
-      // Times overlap if new start < existing end AND new end > existing start (no touching allowed)
-      const rowStart = row.dataset.startTime;
-      const rowEnd   = row.dataset.endTime;
-      if (payload.start_time < rowEnd && payload.end_time > rowStart) {
-        showMessage('Error: This schedule entry overlaps an existing one for the same tutor, course, and day.', 'error'); return;
-      }
-    }
-
-    try {
-      if (id) {
-        await api.request(`/schedule/${id}`, 'PATCH', payload);
-        upsertTableRow('schedule-table', 'schedule-id', id, buildScheduleRow({ ...payload, schedule_id: id }));
-        showMessage(`Updated schedule entry ${id}.`);
-      } else {
-        const data = await api.request('/schedule', 'POST', payload);
-        upsertTableRow('schedule-table', 'schedule-id', data.schedule_id, buildScheduleRow({ ...payload, schedule_id: data.schedule_id }));
-        showMessage(`Created schedule entry ${data.schedule_id}.`);
-      }
-      let promotedCourse = null;
-      const courseLookupResultsEl = $('course_lookup_results');
-      if (courseLookupResultsEl?.value) {
-        try { promotedCourse = JSON.parse(courseLookupResultsEl.value); } catch (_) {}
-        courseLookupResultsEl.value = '';
-      }
-
-      scheduleCourseLookup?.querySelector('option[data-new-course]')?.remove();
-      document.querySelectorAll('#course-search-list .account-search-item').forEach(li => li.classList.remove('selected'));
-
-      resetScheduleForm();
-
-      if (promotedCourse?.course_id && scheduleCourseLookup) {
-        const alreadyExists = Array.from(scheduleCourseLookup.options).some(opt => {
-          try { return String(JSON.parse(opt.value).course_id) === String(promotedCourse.course_id); } catch (_) { return false; }
-        });
-        if (!alreadyExists) {
-          const permOpt       = document.createElement('option');
-          permOpt.value       = JSON.stringify(promotedCourse);
-          permOpt.textContent = `${promotedCourse.course_subject} ${promotedCourse.course_code}`;
-          scheduleCourseLookup.appendChild(permOpt);
-          if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
-            jQuery('#schedule_course_lookup').trigger('change.select2');
-          }
-        }
-      }
-    } catch (err) {
-      showMessage(err.message, 'error');
-    }
-  });
-
-  // --- Event form submit ---
-
-  eventForm?.addEventListener('submit', async (e) => {
+function initEventSection(eventForm, setEventFormMode, resetEventForm) {
+  on(eventForm, 'submit', async (e) => {
     e.preventDefault();
     const id      = $('event_id').value.trim();
     const payload = {
-      user_id:    Number($('event_user_id').value),
-      event_type: Number($('event_type').value),
-      start_day:  $('start_day').value,
-      final_day:  $('final_day').value   || null,
-      duration:   $('duration').value    ? Number($('duration').value) : null,
+      user_id:      Number($('event_user_id').value),
+      event_type:   Number($('event_type').value),
+      start_day:    $('start_day').value,
+      final_day:    $('final_day').value || null,
+      leaving_time: getFlatpickrTimeString('leaving_time_picker'),
     };
 
     if (payload.final_day && payload.start_day && payload.final_day < payload.start_day) {
@@ -1120,8 +990,7 @@ function initAdminUI() {
     }
 
     const EVENT_TYPE_CALLED_OUT = 1;
-    const existingEventRows = Array.from($$('#event-table tbody tr'));
-    for (const row of existingEventRows) {
+    for (const row of $$('#event-table tbody tr')) {
       if (id && row.dataset.eventId === id) continue;
       if (Number(row.dataset.userId) !== payload.user_id) continue;
       const rowType = Number(row.dataset.eventType);
@@ -1150,17 +1019,193 @@ function initAdminUI() {
         upsertTableRow('event-table', 'event-id', data.event_id, buildEventRow({ ...payload, event_id: data.event_id }));
         showMessage(`Created event ${data.event_id}.`);
       }
-
       resetEventForm();
-
     } catch (err) {
       showMessage(err.message, 'error');
     }
   });
+}
+
+function initScheduleSection(scheduleForm, scheduleCourseLookup, setScheduleFormMode, resetScheduleForm, SCHEDULE_FIELD_IDS) {
+  // --- Course lookup dropdown (non-Select2 fallback) ---
+
+  on(scheduleCourseLookup, 'change', () => {
+    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') return;
+    if (!scheduleCourseLookup.value) { clearVal('schedule_course_id'); return; }
+    const selected = scheduleCourseLookup.options[scheduleCourseLookup.selectedIndex];
+    if (!selected.dataset.newCourse) {
+      scheduleCourseLookup.querySelector('option[data-new-course]')?.remove();
+      $$('#course-search-list .account-search-item').forEach(el => el.classList.remove('selected'));
+      clearVal('course_lookup_results');
+    }
+    try { setVal('schedule_course_id', JSON.parse(scheduleCourseLookup.value).course_id || ''); } catch (_) {}
+  });
+
+  // --- UMBC course search ---
+
+  const searchUmbcCourses = (query) => searchUmbc({
+    endpoint:      `/umbc_db/courses?search_str=${encodeURIComponent(query)}`,
+    resultsBoxId:  'course_search_results',
+    statusElId:    'course-search-status',
+    listElId:      'course-search-list',
+    collectionKey: 'umbc_courses',
+    renderItem:    (c) => `
+      <span class="account-search-item-name">${c.course_subject} ${c.course_code} \u2014 ${c.course_name}</span>
+      <span class="account-search-item-meta">${c.subject_name}</span>`,
+    onSelect: (course) => {
+      const courseLookupResults = $('course_lookup_results');
+      if (courseLookupResults) courseLookupResults.value = JSON.stringify(course);
+      if (scheduleCourseLookup) {
+        scheduleCourseLookup.querySelector('option[data-new-course]')?.remove();
+        const opt         = document.createElement('option');
+        opt.value         = 'new';
+        opt.textContent   = 'New Course Selected';
+        opt.dataset.newCourse = 'true';
+        opt.selected      = true;
+        scheduleCourseLookup.prepend(opt);
+        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+          jQuery('#schedule_course_lookup').trigger('change');
+        }
+      }
+      setVal('schedule_course_id', course.course_id || '');
+    },
+    getLabel: (c) => `${c.course_subject} ${c.course_code} \u2014 ${c.course_name}`,
+  });
+
+  on($('course-search-submit'), 'click', async () => {
+    const query = $('course_search_query').value.trim();
+    if (!query) { showMessage('Please enter a search term.', 'error'); return; }
+    await searchUmbcCourses(query);
+  });
+
+  onEnter($('course_search_query'), () => $('course-search-submit')?.click());
+
+  // --- Schedule form submit ---
+
+  on(scheduleForm, 'submit', async (e) => {
+    e.preventDefault();
+
+    const startTime = getFlatpickrTimeString('schedule_start_time_picker');
+    const endTime   = getFlatpickrTimeString('schedule_end_time_picker');
+
+    if (!startTime || !endTime) { showMessage('Error: Start Time and End Time are required.', 'error'); return; }
+    if (endTime <= startTime)   { showMessage('Error: End Time must be after Start Time.', 'error'); return; }
+
+    const id      = $('schedule_id').value.trim();
+    const payload = {
+      user_id:     Number($('schedule_user_id').value),
+      course_id:   Number($('schedule_course_id').value),
+      day_of_week: $('schedule_day_of_week').value,
+      start_time:  startTime,
+      end_time:    endTime,
+    };
+
+    try {
+      const courseLookupResults = $('course_lookup_results');
+      if (courseLookupResults?.value) {
+        const newCourse = JSON.parse(courseLookupResults.value);
+        if (newCourse.course_subject && newCourse.course_code && newCourse.course_name) {
+          Object.assign(payload, {
+            course_subject: newCourse.course_subject,
+            course_code:    newCourse.course_code,
+            course_name:    newCourse.course_name,
+            course_id:      newCourse.course_id,
+          });
+        }
+      }
+    } catch (_) {}
+
+    for (const row of $$('#schedule-table tbody tr')) {
+      if (id && row.dataset.scheduleId === id) continue;
+      if (Number(row.dataset.userId)   !== payload.user_id)   continue;
+      if (Number(row.dataset.courseId) !== payload.course_id) continue;
+      const rowDay = DAY_UNABBR[row.dataset.dayOfWeek] || row.dataset.dayOfWeek;
+      if (rowDay !== payload.day_of_week) continue;
+      if (payload.start_time < row.dataset.endTime && payload.end_time > row.dataset.startTime) {
+        showMessage('Error: This schedule entry overlaps an existing one for the same tutor, course, and day.', 'error'); return;
+      }
+    }
+
+    try {
+      if (id) {
+        await api.request(`/schedule/${id}`, 'PATCH', payload);
+        upsertTableRow('schedule-table', 'schedule-id', id, buildScheduleRow({ ...payload, schedule_id: id }));
+        showMessage(`Updated schedule entry ${id}.`);
+      } else {
+        const data = await api.request('/schedule', 'POST', payload);
+        upsertTableRow('schedule-table', 'schedule-id', data.schedule_id, buildScheduleRow({ ...payload, schedule_id: data.schedule_id }));
+        showMessage(`Created schedule entry ${data.schedule_id}.`);
+      }
+
+      let promotedCourse = null;
+      const courseLookupResultsEl = $('course_lookup_results');
+      if (courseLookupResultsEl?.value) {
+        try { promotedCourse = JSON.parse(courseLookupResultsEl.value); } catch (_) {}
+        courseLookupResultsEl.value = '';
+      }
+
+      scheduleCourseLookup?.querySelector('option[data-new-course]')?.remove();
+      $$('#course-search-list .account-search-item').forEach(li => li.classList.remove('selected'));
+
+      resetScheduleForm();
+
+      if (promotedCourse?.course_id && scheduleCourseLookup) {
+        const alreadyExists = Array.from(scheduleCourseLookup.options).some(opt => {
+          try { return String(JSON.parse(opt.value).course_id) === String(promotedCourse.course_id); } catch (_) { return false; }
+        });
+        if (!alreadyExists) {
+          const permOpt       = document.createElement('option');
+          permOpt.value       = JSON.stringify(promotedCourse);
+          permOpt.textContent = `${promotedCourse.course_subject} ${promotedCourse.course_code}`;
+          scheduleCourseLookup.appendChild(permOpt);
+          if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+            jQuery('#schedule_course_lookup').trigger('change.select2');
+          }
+        }
+      }
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  });
+}
+
+function initAccountSection(accountForm, accountLookupResults, setAccountFormMode, resetAccountForm, ACCOUNT_FIELD_IDS) {
+  // --- UMBC account search ---
+
+  const searchUmbcAccounts = (query) => searchUmbc({
+    endpoint:      `/umbc_db/accounts?search_str=${encodeURIComponent(query)}`,
+    resultsBoxId:  'account_search_results',
+    statusElId:    'account-search-status',
+    listElId:      'account-search-list',
+    collectionKey: 'umbc_accounts',
+    renderItem:    (a) => `
+      <span class="account-search-item-name">${a.first_name} ${a.last_name}</span>
+      <span class="account-search-item-meta">${a.umbc_id} &bull; ${a.umbc_email}</span>`,
+    onSelect: (account) => {
+      if (accountLookupResults) accountLookupResults.value = JSON.stringify(account);
+      setVal('user_login', account.umbc_id    || '');
+      setVal('user_email', account.umbc_email || '');
+      setVal('first_name', account.first_name || '');
+      setVal('last_name',  account.last_name  || '');
+      setAccountFormMode('add');
+    },
+    getLabel: (a) => `${a.first_name} ${a.last_name} (${a.umbc_id})`,
+  });
+
+  on($('account-search-submit'), 'click', async () => {
+    const query = $('account_search_query').value.trim();
+    if (!query) { showMessage('Please enter a search term.', 'error'); return; }
+    if (accountLookupResults) accountLookupResults.value = '';
+    clearFields(ACCOUNT_FIELD_IDS);
+    setAccountFormMode('add');
+    await searchUmbcAccounts(query);
+  });
+
+  onEnter($('account_search_query'), () => $('account-search-submit')?.click());
 
   // --- Account form submit ---
 
-  accountForm?.addEventListener('submit', async (e) => {
+  on(accountForm, 'submit', async (e) => {
     e.preventDefault();
     const id         = $('account_user_id').value.trim();
     const user_login = $('user_login').value.trim();
@@ -1187,30 +1232,14 @@ function initAdminUI() {
         upsertTableRow('account-table', 'user-id', data.user_id, buildAccountRow({ ...payload, user_id: data.user_id }));
         showMessage(`Created account ${data.user_id}.`);
       }
-
       resetAccountForm();
-
     } catch (err) {
       showMessage(err.message, 'error');
     }
   });
+}
 
-  // --- Course lookup dropdown ---
-
-  scheduleCourseLookup?.addEventListener('change', () => {
-    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') return;
-    if (!scheduleCourseLookup.value) { clearVal('schedule_course_id'); return; }
-    const selected = scheduleCourseLookup.options[scheduleCourseLookup.selectedIndex];
-    if (!selected.dataset.newCourse) {
-      scheduleCourseLookup.querySelector('option[data-new-course]')?.remove();
-      $$('#course-search-list .account-search-item').forEach(el => el.classList.remove('selected'));
-      clearVal('course_lookup_results');
-    }
-    try { setVal('schedule_course_id', JSON.parse(scheduleCourseLookup.value).course_id || ''); } catch (_) {}
-  });
-
-  // --- Lookup forms ---
-
+function initLookupForms() {
   bindLookupForm({
     formId:        'lookup-accounts-form',
     queryId:       'lookup-accounts-query',
@@ -1219,7 +1248,6 @@ function initAdminUI() {
     collectionKey: 'umbc_accounts',
     headers:       ['UMBC ID', 'Name', 'Email'],
     buildRow:      (a) => `<tr><td>${a.umbc_id}</td><td>${a.first_name} ${a.last_name}</td><td>${a.umbc_email}</td></tr>`,
-    showMessage,
   });
 
   bindLookupForm({
@@ -1230,67 +1258,23 @@ function initAdminUI() {
     collectionKey: 'umbc_courses',
     headers:       ['Course ID', 'Course', 'Name', 'Subject'],
     buildRow:      (c) => `<tr><td>${c.course_id}</td><td>${c.course_subject} ${c.course_code}</td><td>${c.course_name}</td><td>${c.subject_name}</td></tr>`,
-    showMessage,
   });
-
-  // --- Reset buttons ---
-
-  on($('reset-schedule-form'), 'click', () => {
-    scheduleForm.reset();
-    clearVal('schedule_id');
-    s2reset('schedule_user_id');
-    s2reset('schedule_course_lookup');
-    s2reset('schedule_day_of_week');
-    if (scheduleCourseLookup) scheduleCourseLookup.value = '';
-    scheduleCourseLookup?.querySelector('option[data-new-course]')?.remove();
-    clearVal('course_search_query');
-    setHidden('course_search_results', true);
-    const courseList = $('course-search-list');
-    if (courseList) courseList.innerHTML = '';
-    clearVal('course_lookup_results');
-    clearFields(SCHEDULE_FIELD_IDS);
-    setScheduleFormMode('add');
-  });
-
-  on($('reset-event-form'), 'click', () => {
-    eventForm.reset();
-    clearVal('event_id');
-    s2reset('event_user_id');
-    s2reset('event_type');
-    s2reset('duration');
-    $('event_type').selectedIndex = 0;
-    toggleEventFields();
-    setEventFormMode('add');
-  });
-
-  on($('reset-account-form'), 'click', () => {
-    accountForm.reset();
-    clearVal('account_user_id');
-    if (accountLookupResults) accountLookupResults.value = '';
-    clearVal('account_search_query');
-    setHidden('account_search_results', true);
-    $('account-search-list') && ($('account-search-list').innerHTML = '');
-    clearFields(ACCOUNT_FIELD_IDS);
-    setAccountFormMode('add');
-  });
-
-  if (accountForm)  setAccountFormMode('add');
-  if (scheduleForm) setScheduleFormMode('add');
 }
 
+
 // =============================================================================
-// EVENT TYPE FIELD TOGGLE
+// ADMIN PANEL — EVENT TYPE FIELD TOGGLE
 // =============================================================================
 
 var toggleEventFields = () => {};
 
 function initEventFields() {
-  const eventType       = $('event_type');
+  const eventType         = $('event_type');
   if (!eventType) return;
 
-  const dateRangeFields = $('date-range-fields');
-  const durationField   = $('duration-field');
-  const today           = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const dateRangeFields   = $('date-range-fields');
+  const leavingEarlyField = $('leaving-early-field');
+  const today             = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 
   const hideFieldGroup = (group, defaultDate = '') => {
     group.style.display = 'none';
@@ -1308,12 +1292,12 @@ function initEventFields() {
     const leavingEarly = selectedText.includes('leaving early');
 
     if (!calledOut)    hideFieldGroup(dateRangeFields, today);
-    if (!leavingEarly) hideFieldGroup(durationField);
+    if (!leavingEarly) hideFieldGroup(leavingEarlyField);
     if (calledOut) {
       showFieldGroup(dateRangeFields);
       dateRangeFields.querySelectorAll('input').forEach(i => { i.value = ''; });
     } else if (leavingEarly) {
-      showFieldGroup(durationField);
+      showFieldGroup(leavingEarlyField);
     }
   };
 
@@ -1321,8 +1305,9 @@ function initEventFields() {
   toggleEventFields();
 }
 
+
 // =============================================================================
-// TABLE FILTERING
+// ADMIN PANEL — TABLE FILTERING
 // =============================================================================
 
 const TABLE_FILTER_STATE = {};
@@ -1342,10 +1327,7 @@ function escapeHtml(value) {
 
 function getFilterableHeaders(table) {
   return Array.from(table.querySelectorAll('thead th'))
-    .map((th, index) => ({
-      index,
-      label: th.textContent.trim(),
-    }))
+    .map((th, index) => ({ index, label: th.textContent.trim() }))
     .filter(col => normalizeFilterText(col.label) !== 'actions');
 }
 
@@ -1353,9 +1335,8 @@ function getUniqueColumnValues(table, columnIndex) {
   const values = new Map();
 
   table.querySelectorAll('tbody tr').forEach(row => {
-    const raw = row.children[columnIndex]?.textContent?.trim() || '';
+    const raw        = row.children[columnIndex]?.textContent?.trim() || '';
     const normalized = normalizeFilterText(raw);
-
     if (!raw) return;
     if (!values.has(normalized)) values.set(normalized, raw);
   });
@@ -1366,26 +1347,18 @@ function getUniqueColumnValues(table, columnIndex) {
 }
 
 function initTableFilterState(tableId) {
-  TABLE_FILTER_STATE[tableId] = {
-    appliedColumnIndex: '',
-    appliedQuery: '',
-  };
+  TABLE_FILTER_STATE[tableId] = { appliedColumnIndex: '', appliedQuery: '' };
 }
 
 function applyTableFilter(tableId) {
-  const table = document.getElementById(tableId);
+  const table = $(tableId);
   const state = TABLE_FILTER_STATE[tableId];
-
   if (!table || !state) return;
 
   const query = normalizeFilterText(state.appliedQuery);
 
   table.querySelectorAll('tbody tr').forEach(row => {
-    if (state.appliedColumnIndex === '' || !query) {
-      row.hidden = false;
-      return;
-    }
-
+    if (state.appliedColumnIndex === '' || !query) { row.hidden = false; return; }
     const cellValue = row.children[state.appliedColumnIndex]?.textContent?.trim() || '';
     row.hidden = normalizeFilterText(cellValue) !== query;
   });
@@ -1402,35 +1375,28 @@ function hasSelect2() {
 
 function initTableFilterSelect2(selectEl, placeholder) {
   if (!hasSelect2() || !selectEl) return;
-
   const $select = jQuery(selectEl);
-
   if ($select.hasClass('select2-hidden-accessible')) return;
-
   $select.select2({
-    width: '100%',
-    allowClear: true,
+    width:                   '100%',
+    allowClear:              true,
     placeholder,
     minimumResultsForSearch: 0,
-    dropdownParent: $select.closest('.admin-table-filter'),
+    dropdownParent:          $select.closest('.admin-table-filter'),
   });
 }
 
 function getTableFilterSelectValue(selectEl) {
   if (!selectEl) return '';
-
   if (hasSelect2() && jQuery(selectEl).hasClass('select2-hidden-accessible')) {
     return jQuery(selectEl).val() || '';
   }
-
   return selectEl.value || '';
 }
 
 function setTableFilterSelectValue(selectEl, value) {
   if (!selectEl) return;
-
   selectEl.value = value;
-
   if (hasSelect2() && jQuery(selectEl).hasClass('select2-hidden-accessible')) {
     jQuery(selectEl).val(value).trigger('change.select2');
   }
@@ -1438,36 +1404,29 @@ function setTableFilterSelectValue(selectEl, value) {
 
 function resetTableFilterSearchSelect(searchSelect) {
   if (!searchSelect) return;
-
   searchSelect.innerHTML = '<option value=""></option>';
-  searchSelect.disabled = true;
-
+  searchSelect.disabled  = true;
   setTableFilterSelectValue(searchSelect, '');
 }
 
 function rebuildTableFilterSearchOptions(tableId, columnIndex) {
-  const table = document.getElementById(tableId);
-  const wrapper = document.querySelector(`.admin-table-filter[data-table-id="${tableId}"]`);
+  const table        = $(tableId);
+  const wrapper      = qs(`.admin-table-filter[data-table-id="${tableId}"]`);
   const searchSelect = wrapper?.querySelector('.admin-table-filter-search-select');
-
   if (!table || !searchSelect) return;
 
   resetTableFilterSearchSelect(searchSelect);
-
   if (columnIndex === '') return;
 
   getUniqueColumnValues(table, Number(columnIndex)).forEach(value => {
-    const opt = document.createElement('option');
-    opt.value = value;
+    const opt       = document.createElement('option');
+    opt.value       = value;
     opt.textContent = value;
     searchSelect.appendChild(opt);
   });
 
   searchSelect.disabled = false;
-
-  if (hasSelect2()) {
-    jQuery(searchSelect).trigger('change.select2');
-  }
+  if (hasSelect2()) jQuery(searchSelect).trigger('change.select2');
 }
 
 function buildTableFilterUI(table) {
@@ -1477,7 +1436,7 @@ function buildTableFilterUI(table) {
   initTableFilterState(tableId);
 
   const filter = document.createElement('div');
-  filter.className = 'admin-table-filter';
+  filter.className      = 'admin-table-filter';
   filter.dataset.tableId = tableId;
 
   filter.innerHTML = `
@@ -1501,13 +1460,8 @@ function buildTableFilterUI(table) {
         </select>
       </div>
 
-      <button type="button" class="button button-primary admin-table-filter-search">
-        Search
-      </button>
-
-      <button type="button" class="button button-secondary admin-table-filter-clear">
-        Clear
-      </button>
+      <button type="button" class="button button-primary admin-table-filter-search">Search</button>
+      <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
     </div>
   `;
 
@@ -1515,70 +1469,52 @@ function buildTableFilterUI(table) {
 
   const columnSelect = filter.querySelector('.admin-table-filter-column-select');
   const searchSelect = filter.querySelector('.admin-table-filter-search-select');
-  const searchBtn = filter.querySelector('.admin-table-filter-search');
-  const clearBtn = filter.querySelector('.admin-table-filter-clear');
+  const searchBtn    = filter.querySelector('.admin-table-filter-search');
+  const clearBtn     = filter.querySelector('.admin-table-filter-clear');
 
   initTableFilterSelect2(columnSelect, 'Select column');
   initTableFilterSelect2(searchSelect, 'Start typing to search...');
 
   const handleColumnChange = () => {
-    const columnIndex = getTableFilterSelectValue(columnSelect);
-
     TABLE_FILTER_STATE[tableId].appliedColumnIndex = '';
-    TABLE_FILTER_STATE[tableId].appliedQuery = '';
-
-    rebuildTableFilterSearchOptions(tableId, columnIndex);
+    TABLE_FILTER_STATE[tableId].appliedQuery       = '';
+    rebuildTableFilterSearchOptions(tableId, getTableFilterSelectValue(columnSelect));
     applyTableFilter(tableId);
   };
 
-  if (hasSelect2()) {
-    jQuery(columnSelect).on('select2:select select2:clear', handleColumnChange);
-  }
+  if (hasSelect2()) jQuery(columnSelect).on('select2:select select2:clear', handleColumnChange);
+  on(columnSelect, 'change', handleColumnChange);
 
-  columnSelect.addEventListener('change', handleColumnChange);
-
-  searchBtn.addEventListener('click', () => {
+  on(searchBtn, 'click', () => {
     TABLE_FILTER_STATE[tableId].appliedColumnIndex = getTableFilterSelectValue(columnSelect);
-    TABLE_FILTER_STATE[tableId].appliedQuery = getTableFilterSelectValue(searchSelect);
-
+    TABLE_FILTER_STATE[tableId].appliedQuery       = getTableFilterSelectValue(searchSelect);
     applyTableFilter(tableId);
   });
 
-  clearBtn.addEventListener('click', () => {
+  on(clearBtn, 'click', () => {
     initTableFilterState(tableId);
-
     setTableFilterSelectValue(columnSelect, '');
     resetTableFilterSearchSelect(searchSelect);
-
     applyTableFilter(tableId);
   });
 }
 
-function initAdminTableFilters() {
-  ['event-table', 'schedule-table', 'account-table'].forEach(tableId => {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-
-    buildTableFilterUI(table);
-  });
-}
 
 // =============================================================================
-// TABLE SORTING
+// ADMIN PANEL — TABLE SORTING
 // =============================================================================
 
 function parseDisplayTimeForSort(text) {
   const value = String(text || '').trim().toLowerCase();
-
-  if (value === 'noon') return 12 * 60;
+  if (value === 'noon')     return 12 * 60;
   if (value === 'midnight') return 0;
 
   const match = value.match(/^(\d{1,2}):(\d{2})\s*(a\.m\.|p\.m\.|am|pm)$/);
   if (!match) return null;
 
-  let hour = Number(match[1]);
-  const minute = Number(match[2]);
-  const ampm = match[3];
+  let hour       = Number(match[1]);
+  const minute   = Number(match[2]);
+  const ampm     = match[3];
 
   if (ampm.startsWith('a') && hour === 12) hour = 0;
   if (ampm.startsWith('p') && hour !== 12) hour += 12;
@@ -1587,18 +1523,11 @@ function parseDisplayTimeForSort(text) {
 }
 
 function getSortValue(row, columnIndex, headerLabel) {
-  const text = row.children[columnIndex]?.textContent.trim() || '';
+  const text  = row.children[columnIndex]?.textContent.trim() || '';
   const label = headerLabel.toLowerCase();
 
   if (label === 'day') {
-    const dayOrder = {
-      monday: 1,
-      tuesday: 2,
-      wednesday: 3,
-      thursday: 4,
-      friday: 5,
-    };
-
+    const dayOrder = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5 };
     return dayOrder[text.toLowerCase()] || 999;
   }
 
@@ -1615,7 +1544,7 @@ function sortTable(table, columnIndex, ascending = true) {
   if (!tbody) return;
 
   const headerLabel = table.querySelectorAll('thead th')[columnIndex]?.childNodes[0]?.textContent.trim() || '';
-  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const rows        = Array.from(tbody.querySelectorAll('tr'));
 
   rows.sort((a, b) => {
     const aVal = getSortValue(a, columnIndex, headerLabel);
@@ -1624,7 +1553,6 @@ function sortTable(table, columnIndex, ascending = true) {
     if (typeof aVal === 'number' && typeof bVal === 'number') {
       return ascending ? aVal - bVal : bVal - aVal;
     }
-
     return ascending
       ? String(aVal).localeCompare(String(bVal), undefined, { numeric: true })
       : String(bVal).localeCompare(String(aVal), undefined, { numeric: true });
@@ -1634,46 +1562,39 @@ function sortTable(table, columnIndex, ascending = true) {
 }
 
 function addSortArrowsToTable(table) {
-  const headers = table.querySelectorAll('thead th');
-
-  headers.forEach((th, index) => {
-    // Skip Actions column
+  table.querySelectorAll('thead th').forEach((th, index) => {
     if (th.textContent.trim().toLowerCase() === 'actions') return;
 
-    const wrapper = document.createElement('span');
+    const wrapper     = document.createElement('span');
     wrapper.className = 'table-sort-arrows';
-
     wrapper.innerHTML = `
-      <button type="button" class="sort-up" aria-label="Sort ascending">▲</button>
+      <button type="button" class="sort-up"   aria-label="Sort ascending">▲</button>
       <button type="button" class="sort-down" aria-label="Sort descending">▼</button>
     `;
-
     th.appendChild(wrapper);
 
-    const upBtn = wrapper.querySelector('.sort-up');
-    const downBtn = wrapper.querySelector('.sort-down');
-
-    upBtn.addEventListener('click', () => {
-      sortTable(table, index, true);   // ascending
-    });
-
-    downBtn.addEventListener('click', () => {
-      sortTable(table, index, false);  // descending
-    });
+    on(wrapper.querySelector('.sort-up'),   'click', () => sortTable(table, index, true));
+    on(wrapper.querySelector('.sort-down'), 'click', () => sortTable(table, index, false));
   });
 }
 
-function initTableSorting() {
-  ['event-table', 'schedule-table', 'account-table'].forEach(tableId => {
-    const table = document.getElementById(tableId);
-    if (!table) return;
 
+// =============================================================================
+// ADMIN PANEL — TABLE INIT (FILTERS + SORTING)
+// =============================================================================
+
+function initAdminTables() {
+  ['event-table', 'schedule-table', 'account-table'].forEach(tableId => {
+    const table = $(tableId);
+    if (!table) return;
+    buildTableFilterUI(table);
     addSortArrowsToTable(table);
   });
 }
 
+
 // =============================================================================
-// AUDIT LOGS
+// ADMIN PANEL — AUDIT LOGS
 // =============================================================================
 
 function initLogsUI() {
@@ -1687,7 +1608,6 @@ function initLogsUI() {
   const nextBtn   = $('logs-next-btn');
   const jumpBtn   = $('logs-jump-btn');
   const jumpInput = $('logs-jump-date');
-  const msgEl     = $('logs-message');
 
   if (!fetchBtn) return;
 
@@ -1714,16 +1634,14 @@ function initLogsUI() {
   }
 
   function formatLabel(key) {
-    return dateFromKey(key).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-    });
+    return dateFromKey(key).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   // --- Rendering ---
 
   function renderWindow(startKey) {
     const todayKey = toDateKey(new Date());
-    if (startKey > todayKey) startKey = todayKey;
+    if (startKey > todayKey)  startKey = todayKey;
     if (startKey < oldestDate) startKey = oldestDate;
 
     windowStart = startKey;
@@ -1743,7 +1661,7 @@ function initLogsUI() {
     } else {
       emptyMsg.hidden = true;
       windowEntries.forEach(text => {
-        const span = document.createElement('span');
+        const span       = document.createElement('span');
         span.className   = 'logs-entry';
         span.textContent = text;
         box.appendChild(span);
@@ -1760,7 +1678,7 @@ function initLogsUI() {
       .join('\n');
   }
 
-  // --- Export button (shown after first fetch) ---
+  // --- Event handlers ---
 
   on(exportBtn, 'click', () => {
     const blob = new Blob([buildExport()], { type: 'text/plain' });
@@ -1772,29 +1690,22 @@ function initLogsUI() {
     URL.revokeObjectURL(url);
   });
 
-  // --- Fetch ---
-
   on(fetchBtn, 'click', async () => {
     fetchBtn.disabled = true;
     showMessage('Fetching logs…');
-
     try {
-      const data = await api.request(`/logs`);
-
+      const data = await api.request('/logs');
       logsByDate = {};
       for (const entry of data.logs) {
         if (!logsByDate[entry.date]) logsByDate[entry.date] = [];
         logsByDate[entry.date].push(entry);
       }
-
-      allDates   = Object.keys(logsByDate).sort();
-      oldestDate = allDates[0] || toDateKey(new Date());
-
-      viewer.hidden      = false;
-      exportBtn.hidden   = false;
+      allDates        = Object.keys(logsByDate).sort();
+      oldestDate      = allDates[0] || toDateKey(new Date());
+      viewer.hidden   = false;
+      exportBtn.hidden = false;
       renderWindow(toDateKey(new Date()));
       showMessage('Logs loaded.');
-
     } catch (err) {
       showMessage('Network error fetching logs.', 'error');
     } finally {
@@ -1802,8 +1713,8 @@ function initLogsUI() {
     }
   });
 
-  on(prevBtn, 'click', () => { renderWindow(addDays(windowStart, -7)); });
-  on(nextBtn, 'click', () => { renderWindow(addDays(windowStart,  7)); });
+  on(prevBtn, 'click', () => renderWindow(addDays(windowStart, -7)));
+  on(nextBtn, 'click', () => renderWindow(addDays(windowStart,  7)));
 
   on(jumpBtn, 'click', () => {
     const val = jumpInput?.value;
@@ -1813,6 +1724,246 @@ function initLogsUI() {
   });
 }
 
+
+// =============================================================================
+// ADMIN PANEL — IMPORT / EXPORT
+// =============================================================================
+
+function initImportUI() {
+  const importForm      = $('import-form');
+  if (!importForm) return;
+
+  const fileInput       = $('csv_file');
+  const uploadBtn       = $('import-upload-btn');
+  const resultPanel     = $('import-result-panel');
+  const errorPanel      = $('import-error-panel');
+  const errorBox        = $('import-error-box');
+  const successPanel    = $('import-success-panel');
+  const previewBox      = $('import-preview-box');
+  const confirmBtn      = $('import-confirm-btn');
+  const cancelBtn       = $('import-cancel-btn');
+  const templateLink    = $('import-download-template');
+  const exportLink      = $('import-export-db');
+
+  let pendingToken = null;
+
+  // --- Panel helpers ---
+
+  function hideResultPanels() {
+    if (resultPanel)  resultPanel.hidden  = true;
+    if (errorPanel)   errorPanel.hidden   = true;
+    if (successPanel) successPanel.hidden = true;
+    if (errorBox)     errorBox.innerHTML  = '';
+    if (previewBox)   previewBox.innerHTML = '';
+    pendingToken = null;
+  }
+
+  // --- Error renderer (compiler-style, grouped by section) ---
+
+  function renderErrors(errors) {
+    if (!errorBox) return;
+    if (!errors || !errors.length) {
+      errorBox.innerHTML = "<p class='logs-empty'>No errors.</p>";
+      return;
+    }
+
+    const bySection = {};
+    for (const e of errors) {
+      const sec = e.section || 'general';
+      if (!bySection[sec]) bySection[sec] = [];
+      bySection[sec].push(e);
+    }
+
+    const frag = document.createDocumentFragment();
+
+    for (const [section, errs] of Object.entries(bySection)) {
+      const header = document.createElement('span');
+      header.className        = 'logs-entry';
+      header.style.fontWeight = '700';
+      header.style.color      = '#b71c1c';
+      header.textContent      = `[${section.toUpperCase()}]`;
+      frag.appendChild(header);
+
+      for (const e of errs) {
+        const entry    = document.createElement('span');
+        entry.className = 'logs-entry';
+        const rowStr   = e.row   ? `row ${e.row}`   : '';
+        const fieldStr = e.field ? `(${e.field})`   : '';
+        const loc      = [rowStr, fieldStr].filter(Boolean).join(' ');
+        entry.textContent = `  ${loc ? loc + ' \u2014 ' : ''}${e.message}`;
+        frag.appendChild(entry);
+      }
+    }
+
+    errorBox.innerHTML = '';
+    errorBox.appendChild(frag);
+  }
+
+  // --- Preview renderer ---
+
+  function renderPreview(preview) {
+    if (!previewBox) return;
+    previewBox.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    const title = document.createElement('span');
+    title.className        = 'logs-entry';
+    title.style.fontWeight = '700';
+    title.textContent      = 'The following data will replace what is currently in the database:';
+    frag.appendChild(title);
+
+    [
+      `  Subjects  : ${preview.subjects}`,
+      `  Courses   : ${preview.courses}`,
+      `  Users     : ${preview.users}`,
+      `  Schedule  : ${preview.schedule} entries`,
+    ].forEach(line => {
+      const entry       = document.createElement('span');
+      entry.className   = 'logs-entry';
+      entry.textContent = line;
+      frag.appendChild(entry);
+    });
+
+    const note = document.createElement('span');
+    note.className        = 'logs-entry';
+    note.style.color      = '#555';
+    note.style.fontStyle  = 'italic';
+    note.textContent      = '  Existing subjects, courses, tutors, schedule, and events will be fully replaced.';
+    frag.appendChild(note);
+
+    previewBox.appendChild(frag);
+  }
+
+  // --- Template download ---
+
+  on(templateLink, 'click', (e) => {
+    e.preventDefault();
+    window.location.href = `${api.root}/asc-tutoring/v1/import/template?_wpnonce=${window.wpApiSettings?.nonce || ''}`;
+  });
+
+  // --- Export current DB ---
+
+  on(exportLink, 'click', (e) => {
+    e.preventDefault();
+    window.location.href = `${api.root}/asc-tutoring/v1/import/export?_wpnonce=${window.wpApiSettings?.nonce || ''}`;
+  });
+
+  // --- Upload & validate (multipart — cannot use api.request) ---
+
+  on(importForm, 'submit', async (e) => {
+    e.preventDefault();
+    clearMessages();
+    hideResultPanels();
+
+    const file = fileInput?.files[0];
+    if (!file) {
+      showMessage('Please select a CSV file.', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('csv_file', file);
+
+    if (uploadBtn) {
+      uploadBtn.disabled    = true;
+      uploadBtn.textContent = 'Validating\u2026';
+    }
+
+    let data;
+    try {
+      const res = await fetch(`${api.root}/asc-tutoring/v1/import/validate`, {
+        method:  'POST',
+        headers: { 'X-WP-Nonce': window.wpApiSettings?.nonce || '' },
+        body:    formData,
+      });
+      data = await res.json().catch(() => ({}));
+    } catch {
+      showMessage('Network error. Please try again.', 'error');
+      if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Validate & Preview'; }
+      return;
+    }
+
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Validate & Preview'; }
+
+    // REST-level error (permission denied, server crash, etc.)
+    if (data.code && data.message) {
+      showMessage(data.message, 'error');
+      return;
+    }
+
+    if (resultPanel) resultPanel.hidden = false;
+
+    if (data.status === 'error') {
+      if (errorPanel) errorPanel.hidden = false;
+      renderErrors(data.errors);
+      showMessage(
+        `Validation failed \u2014 ${data.errors.length} issue${pluralSuffix(data.errors.length)} found.`,
+        'error'
+      );
+    } else if (data.status === 'success') {
+      pendingToken = data.token;
+      if (successPanel) successPanel.hidden = false;
+      renderPreview(data.preview);
+      showMessage('Validation passed. Review the summary and confirm to import.', 'success');
+    } else {
+      showMessage('Unexpected response from server.', 'error');
+    }
+  });
+
+  // --- Cancel ---
+
+  on(cancelBtn, 'click', () => {
+    hideResultPanels();
+    clearMessages();
+    if (fileInput) fileInput.value = '';
+  });
+
+  // --- Confirm import ---
+
+  on(confirmBtn, 'click', async () => {
+    if (!pendingToken) {
+      showMessage('No pending import. Please re-upload the CSV.', 'error');
+      return;
+    }
+
+    if (confirmBtn) {
+      confirmBtn.disabled    = true;
+      confirmBtn.textContent = 'Importing\u2026';
+    }
+    clearMessages();
+
+    let data;
+    try {
+      data = await api.request('/import/confirm', 'POST', {
+        token: pendingToken,
+      });
+    } catch (err) {
+      showMessage('Import failed: ' + err.message, 'error');
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Import'; }
+      return;
+    }
+
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Import'; }
+
+    if (data.success) {
+      const imp = data.imported;
+      hideResultPanels();
+      if (fileInput) fileInput.value = '';
+      showMessage(
+        `Import successful \u2014 ` +
+        `${imp.subjects} subject${pluralSuffix(imp.subjects)}, ` +
+        `${imp.courses} course${pluralSuffix(imp.courses)}, ` +
+        `${imp.users} user${pluralSuffix(imp.users)}, ` +
+        `${imp.schedule} schedule entr${imp.schedule !== 1 ? 'ies' : 'y'} loaded.`,
+        'success'
+      );
+    } else {
+      showMessage('Import failed. Please try again or contact an administrator.', 'error');
+    }
+  });
+}
+
+
 // =============================================================================
 // SELECT2
 // =============================================================================
@@ -1820,7 +1971,6 @@ function initLogsUI() {
 const SELECT2_IDS = [
   'event_user_id',
   'event_type',
-  'duration',
   'schedule_user_id',
   'schedule_course_lookup',
   'schedule_day_of_week',
@@ -1842,11 +1992,11 @@ function initSelect2Dropdowns() {
   if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
 
   SELECT2_IDS.forEach(id => {
-    const el = document.getElementById(id);
+    const el = $(id);
     if (!el) return;
     jQuery(`#${id}`).select2({
-      width: '100%',
-      allowClear: true,
+      width:       '100%',
+      allowClear:  true,
       placeholder: el.options[0]?.text || 'Select\u2026',
     });
   });
@@ -1854,13 +2004,13 @@ function initSelect2Dropdowns() {
   jQuery('#event_type').on('select2:select select2:clear', () => toggleEventFields());
 
   jQuery('#schedule_course_lookup').on('select2:select select2:clear', () => {
-    const el = document.getElementById('schedule_course_lookup');
+    const el = $('schedule_course_lookup');
     if (!el) return;
 
     const selected = el.value ? el.options[el.selectedIndex] : null;
     if (!selected?.dataset?.newCourse) {
       el.querySelector('option[data-new-course]')?.remove();
-      document.querySelectorAll('#course-search-list .account-search-item').forEach(li => li.classList.remove('selected'));
+      $$('#course-search-list .account-search-item').forEach(li => li.classList.remove('selected'));
       clearVal('course_lookup_results');
     }
 
@@ -1868,6 +2018,7 @@ function initSelect2Dropdowns() {
     try { setVal('schedule_course_id', JSON.parse(el.value).course_id || ''); } catch (_) {}
   });
 }
+
 
 // =============================================================================
 // BOOT
@@ -1877,10 +2028,11 @@ document.addEventListener('DOMContentLoaded', () => {
   handleResize();
   initExpanders();
   initSubjectFilters();
-  initAdminTableFilters();
-  initTableSorting();
+  initAdminTables();
   initAdminUI();
   initEventFields();
+  initFlatpickrTimePickers();
   initLogsUI();
+  initImportUI();
   initSelect2Dropdowns();
 });

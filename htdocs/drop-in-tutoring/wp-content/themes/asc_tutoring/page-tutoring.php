@@ -3,20 +3,15 @@
 Template Name: Drop-In Tutoring
 */
 get_header();
-
 [$uSubjects, $uCourses, $uSchedule, $eventTypes, $uEvents] = user_query();
-
 ?>
-
 <main id="main" class="container">
   <?php get_template_part('sidebar', 'tutoring'); ?>
-
   <div class="main-content">
     <article id="post-dropin" class="page type-page status-publish hentry">
       <header class="entry-header">
         <h1 class="entry-title">Drop-In Tutoring</h1>
       </header>
-
       <div class="entry-content">
         <blockquote>
           <p style="text-align: center">
@@ -30,25 +25,21 @@ get_header();
             </a>
           </p>
         </blockquote>
-
         <p>
           Drop-in tutoring (located in the Library) is recommended for students who have quick questions.
           Students who would like more in-depth assistance should make a
           <a href="https://academicsuccess.umbc.edu/appointment-tutoring/">tutoring appointment</a>.
         </p>
-
         <p>
           Peer support for specific courses depends on resources available each semester.
           Looking for a different course? Please visit our
           <a href="https://academicsuccess.umbc.edu/tutoring/"><strong>main tutoring page</strong></a>
           to view other support options.
         </p>
-
         <p>
           If you have any questions about drop-in tutoring, please email
           <a href="mailto:tutoring@umbc.edu">tutoring@umbc.edu</a>.
         </p>
-
         <h2>Available Courses</h2>
         <ul 
           aria-label="Available courses navigation" 
@@ -73,13 +64,11 @@ get_header();
             <?php endif; ?>
           <?php endforeach; ?>
         </ul>
-
         <?php
         $expander_id = 1000;
         foreach ($uSubjects as $subject):
           $subject_code = $subject['subject_code'];
           $subject_courses = $uCourses[$subject_code] ?? [];
-
           if (empty($subject_courses)) {
               continue;
           }
@@ -87,16 +76,13 @@ get_header();
         <div class="subject-section" data-subject="<?php echo esc_attr($subject['subject_code']); ?>">
           <a id="<?php echo esc_attr(tutoring_anchor_from_subject($subject)); ?>"></a>
           <h3><?php echo tutoring_subject_heading($subject); ?></h3>
-
           <?php foreach ($subject_courses as $course): ?>
             <?php
               $course_schedule = $uSchedule[$course['course_id']] ?? [];
               $days = [];
-
               foreach ($course_schedule as $row) {
                   $days[$row['day_of_week']][] = $row;
               }
-
               $header_id = 'sights-expander-header-' . $expander_id;
               $content_id = 'sights-expander-content-' . $expander_id;
               $expander_id++;
@@ -114,7 +100,6 @@ get_header();
                   <?php echo esc_html($course['course_subject'] . ' ' . $course['course_code'] . ' - ' . $course['course_name']); ?>
                 </div>
               </div>
-
               <div
                 aria-labelledby="<?php echo esc_attr($header_id); ?>"
                 class="sights-expander-content sights-expander-hidden mceNonEditable"
@@ -129,7 +114,6 @@ get_header();
                         are available on the following days and times:
                       </strong>
                     </p>
-
                     <div class="umbc-table-wrapper">
                       <table class="umbc-table">
                         <thead>
@@ -148,11 +132,9 @@ get_header();
                             if (empty($days[$day])) {
                                 continue;
                             }
-
                             $entries = $days[$day];
                             $rowspan = count($entries);
                             $first_row = true;
-
                             foreach ($entries as $entry):
                           ?>
                             <tr>
@@ -161,7 +143,6 @@ get_header();
                                   <?php echo esc_html(tutoring_day_label($day)); ?>
                                 </td>
                               <?php $first_row = false; endif; ?>
-
                               <td><?php echo esc_html(tutoring_format_time($entry['start_time'])); ?></td>
                               <td><?php echo esc_html(tutoring_format_time($entry['end_time'])); ?></td>
                               <td><?php echo esc_html($entry['first_name']); ?></td>
@@ -222,49 +203,4 @@ get_header();
     </article>
   </div>
 </main>
-
-<style>
-.entry-content .umbc-table td.tutoring-status-cell {
-  white-space: nowrap;
-  vertical-align: middle;
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
-.tutoring-status-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.tutoring-status-main {
-  font-weight: bold;
-  line-height: 1.3;
-}
-
-.tutoring-status-icon svg {
-  margin-right: 3px;
-  vertical-align: middle;
-  position: relative;
-  top: -1px;
-}
-
-.tutoring-status-sub {
-  line-height: 1.3;
-  white-space: normal;
-}
-
-.tutoring-leaving-early-note {
-  font-weight: bold;
-  color: #a67a05;
-}
-
-.tutoring-call-out-note {
-  color: #555;
-}
-
-.subject-filter-button.active {
-  outline: 2px solid #000;
-}
-</style>
 <?php get_footer(); ?>

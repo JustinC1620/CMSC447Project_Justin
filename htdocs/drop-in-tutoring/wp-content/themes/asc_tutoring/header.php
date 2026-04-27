@@ -17,8 +17,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/favicon-16x16.png">
 
-    <link rel="stylesheet" href="<?php echo esc_url(get_stylesheet_uri()); ?>">
-
     <?php wp_head(); ?>
 </head>
 
