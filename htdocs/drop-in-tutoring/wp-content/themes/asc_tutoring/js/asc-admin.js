@@ -147,6 +147,7 @@ function initTabSwitching() {
   $$('.admin-tab').forEach(tab => {
     on(tab, 'click', () => {
       clearMessages();
+      clearValidationBubble();
       $$('.admin-tab').forEach(t => t.classList.remove('active'));
       $$('.admin-section').forEach(s => s.classList.remove('active'));
       tab.classList.add('active');
@@ -293,9 +294,6 @@ function clearScheduleFormSnapshot() {
 }
 
 function initScheduleSection(scheduleForm, scheduleCourseLookup, setScheduleFormMode, resetScheduleForm, SCHEDULE_FIELD_IDS) {
-  // Remove native required attributes — validation is handled manually
-  scheduleForm.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'));
-
   // --- Course lookup dropdown (non-Select2 fallback) ---
 
   on(scheduleCourseLookup, 'change', () => {
@@ -530,9 +528,6 @@ function clearAccountFormSnapshot() {
 }
 
 function initAccountSection(accountForm, accountLookupResults, setAccountFormMode, resetAccountForm, ACCOUNT_FIELD_IDS) {
-  // Remove native required attributes — validation is handled manually
-  accountForm.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'));
-
   // --- UMBC account search ---
 
   const searchUmbcAccounts = (query) => searchUmbc({
@@ -731,7 +726,7 @@ function initLogsUI() {
     const windowEntries = [];
     for (let i = 0; i < 7; i++) {
       const dayKey = addDays(startKey, -i);
-      (logsByDate[dayKey] || []).forEach(entry => windowEntries.push(entry.lines.join('\n')));
+      (logsByDate[dayKey] || []).forEach(entry => windowEntries.push(entry));
     }
 
     dateLabel.textContent = `${formatLabel(endKey)} - ${formatLabel(startKey)}`;
@@ -741,13 +736,19 @@ function initLogsUI() {
       emptyMsg.hidden = false;
     } else {
       emptyMsg.hidden = true;
-      windowEntries.forEach(text => {
-        const span       = document.createElement('span');
-        span.className   = 'logs-entry';
-        span.textContent = text;
+      windowEntries.forEach(entry => {
+        const span             = document.createElement('span');
+        span.className         = 'logs-entry';
+        span.textContent       = entry.lines.join('\n');
+        span.dataset.logUser   = entry.user         || '';
+        span.dataset.logRole   = entry.role         || '';
+        span.dataset.logAction = entry.action_label || '';
+        span.dataset.logType   = entry.table_label  || '';
         box.appendChild(span);
       });
     }
+
+    reapplyLogsFilter();
 
     prevBtn.disabled = endKey <= oldestDate;
     nextBtn.disabled = startKey >= todayKey;
@@ -755,7 +756,7 @@ function initLogsUI() {
 
   function buildExport() {
     return allDates
-      .flatMap(date => (logsByDate[date] || []).map(e => e.lines.join('\n')))
+      .flatMap(date => (logsByDate[date] || []).map(entry => entry.lines.join('\n')))
       .join('\n');
   }
 
@@ -802,6 +803,140 @@ function initLogsUI() {
     if (!val) { showMessage('Select a date first.', 'error'); return; }
     renderWindow(val);
     showMessage(`Jumped to week of ${formatLabel(val)}.`);
+  });
+
+  initLogsFilter();
+}
+
+
+// =============================================================================
+// ADMIN PANEL — LOGS FILTERING
+// =============================================================================
+
+const LOGS_FILTER_STATE = { appliedColumn: '', appliedQuery: '' };
+
+const LOGS_FILTER_DATA_ATTR = {
+  role:   'logRole',
+  user:   'logUser',
+  action: 'logAction',
+  type:   'logType',
+};
+
+function getUniqueLogValues(column) {
+  const box  = $('logs-box');
+  const attr = LOGS_FILTER_DATA_ATTR[column];
+  if (!box || !attr) return [];
+
+  const values = new Map();
+  box.querySelectorAll('span.logs-entry').forEach(span => {
+    const raw        = span.dataset[attr] || '';
+    const normalized = normalizeFilterText(raw);
+    if (!raw) return;
+    if (!values.has(normalized)) values.set(normalized, raw);
+  });
+
+  return Array.from(values.values()).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
+}
+
+function applyLogsFilter() {
+  const box     = $('logs-box');
+  const emptyEl = $('logs-empty');
+  if (!box) return;
+
+  const { appliedColumn, appliedQuery } = LOGS_FILTER_STATE;
+  const attr  = LOGS_FILTER_DATA_ATTR[appliedColumn];
+  const query = normalizeFilterText(appliedQuery);
+
+  let visibleCount = 0;
+  box.querySelectorAll('span.logs-entry').forEach(span => {
+    if (!attr || !query) {
+      span.hidden = false;
+      visibleCount++;
+      return;
+    }
+    const val    = normalizeFilterText(span.dataset[attr] || '');
+    const hidden = val !== query;
+    span.hidden  = hidden;
+    if (!hidden) visibleCount++;
+  });
+
+  if (emptyEl) emptyEl.hidden = visibleCount > 0;
+}
+
+function reapplyLogsFilter() {
+  applyLogsFilter();
+}
+
+function rebuildLogsFilterSearchOptions(column) {
+  const filter       = qs('.admin-table-filter[data-logs-filter]');
+  const searchSelect = filter?.querySelector('.admin-table-filter-search-select');
+  if (!searchSelect) return;
+
+  searchSelect.innerHTML = '<option value=""></option>';
+  searchSelect.disabled  = true;
+  setTableFilterSelectValue(searchSelect, '');
+
+  if (!column) return;
+
+  getUniqueLogValues(column).forEach(value => {
+    const opt       = document.createElement('option');
+    opt.value       = value;
+    opt.textContent = value;
+    searchSelect.appendChild(opt);
+  });
+
+  searchSelect.disabled = false;
+  if (hasSelect2()) jQuery(searchSelect).trigger('change.select2');
+}
+
+function initLogsFilter() {
+  const filter = qs('.admin-table-filter[data-logs-filter]');
+  if (!filter) return;
+
+  const columnSelect = filter.querySelector('.admin-table-filter-column-select');
+  const searchSelect = filter.querySelector('.admin-table-filter-search-select');
+  const searchBtn    = filter.querySelector('.admin-table-filter-search');
+  const clearBtn     = filter.querySelector('.admin-table-filter-clear');
+  const valueLabel   = filter.querySelector('.admin-table-filter-value-label');
+
+  initTableFilterSelect2(columnSelect, 'Select filter');
+  initTableFilterSelect2(searchSelect, 'Start typing to search…');
+
+  const updateValueLabel = () => {
+    if (!valueLabel) return;
+    const selected = columnSelect.options[columnSelect.selectedIndex];
+    const text     = selected?.value !== '' ? selected?.text?.trim() : '';
+    valueLabel.innerHTML = `<strong>${text || 'Value'}</strong>`;
+  };
+
+  const handleColumnChange = () => {
+    LOGS_FILTER_STATE.appliedColumn = '';
+    LOGS_FILTER_STATE.appliedQuery  = '';
+    rebuildLogsFilterSearchOptions(getTableFilterSelectValue(columnSelect));
+    applyLogsFilter();
+    updateValueLabel();
+  };
+
+  if (hasSelect2()) jQuery(columnSelect).on('select2:select select2:clear', handleColumnChange);
+  on(columnSelect, 'change', handleColumnChange);
+
+  on(searchBtn, 'click', () => {
+    LOGS_FILTER_STATE.appliedColumn = getTableFilterSelectValue(columnSelect);
+    LOGS_FILTER_STATE.appliedQuery  = getTableFilterSelectValue(searchSelect);
+    applyLogsFilter();
+  });
+
+  on(clearBtn, 'click', () => {
+    LOGS_FILTER_STATE.appliedColumn = '';
+    LOGS_FILTER_STATE.appliedQuery  = '';
+    setTableFilterSelectValue(columnSelect, '');
+    searchSelect.innerHTML = '<option value=""></option>';
+    searchSelect.disabled  = true;
+    setTableFilterSelectValue(searchSelect, '');
+    applyLogsFilter();
+    updateValueLabel();
   });
 }
 
@@ -1166,6 +1301,7 @@ function initAdminUI() {
       captureAccountFormSnapshot(accountForm);
       showMessage(`Loaded account ${row.dataset.userId}.`, 'success');
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   // --- Delete buttons (schedule & accounts) ---
@@ -1187,6 +1323,7 @@ function initAdminUI() {
     } catch (err) {
       showMessage(err.message, 'error');
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   document.addEventListener('click', async (e) => {
@@ -1207,6 +1344,7 @@ function initAdminUI() {
     } catch (err) {
       showMessage(err.message, 'error');
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   // --- Delete course schedule button ---
@@ -1220,13 +1358,14 @@ function initAdminUI() {
     if (!confirm(`Delete all schedule entries for course ${courseId}?`)) return;
 
     try {
-      await api.request(`/schedule/course/${courseId}`, 'DELETE');
+      await api.request(`/course/${courseId}`, 'DELETE');
       $$(`#schedule-table tbody tr[data-course-id="${courseId}"]`).forEach(r => r.remove());
       reapplyTableFilter('schedule-table');
       showMessage(`Deleted all schedule entries for course ${courseId}.`);
     } catch (err) {
       showMessage(err.message, 'error');
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   // --- Reset buttons ---

@@ -40,11 +40,11 @@ foreach ($eventTypes as $eventType) {
         <?php else : ?>
           <?php if ($is_admin) : ?>
             <nav class="tutoring-admin-tabs" aria-label="Admin sections">
-                <button type="button" class="button button-primary admin-tab active" data-tab="events">Tutor Events</button>            
-                <button type="button" class="button button-primary admin-tab" data-tab="schedule">Schedule</button>
-                <button type="button" class="button button-primary admin-tab" data-tab="accounts">Accounts</button>
-                <button type="button" class="button button-primary admin-tab" data-tab="import">Bulk Updates</button>
-                <button type="button" class="button button-primary admin-tab" data-tab="logs">Logs</button>
+              <button type="button" class="button button-primary admin-tab active" data-tab="events">Tutor Events</button>
+              <button type="button" class="button button-primary admin-tab" data-tab="schedule">Schedule</button>
+              <button type="button" class="button button-primary admin-tab" data-tab="accounts">Accounts</button>
+              <button type="button" class="button button-primary admin-tab" data-tab="import">Bulk Updates</button>
+              <button type="button" class="button button-primary admin-tab" data-tab="logs">Logs</button>
             </nav>
           <?php endif; ?>
 
@@ -104,23 +104,32 @@ foreach ($eventTypes as $eventType) {
             </section>
             <div class="umbc-table-wrapper">
               <div class="admin-table-filter" data-table-id="event-table">
-                <div class="admin-table-filter-row">
-                  <label class="admin-table-filter-label"><strong>Filter by</strong></label>
-                  <select class="admin-table-filter-column-select" aria-label="Select filter column for event-table">
-                    <option value=""></option>
-                    <option value="0">Tutor</option>
-                    <option value="1">Type</option>
-                    <option value="2">Start Date</option>
-                    <option value="3">End Date</option>
-                    <option value="4">Time</option>
-                  </select>
-                  <div class="admin-table-filter-search-wrap">
+                <div class="admin-grid admin-grid--filter">
+                  <div>
+                    <label><strong>Filter by</strong></label>
+                    <select class="admin-table-filter-column-select" aria-label="Select filter column for event-table">
+                      <option value=""></option>
+                      <option value="0">Tutor</option>
+                      <option value="1">Type</option>
+                      <option value="2">Start Date</option>
+                      <option value="3">End Date</option>
+                      <option value="4">Time</option>
+                    </select>
+                  </div>
+                  <div class="admin-table-filter-search-field">
+                    <label class="admin-table-filter-value-label"><strong>Value</strong></label>
                     <select class="admin-table-filter-search-select" aria-label="Filter search for event-table" disabled>
                       <option value=""></option>
                     </select>
                   </div>
-                  <button type="button" class="button button-primary admin-table-filter-search">Search</button>
-                  <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                  <div>
+                    <span class="screen-reader-text"> </span>
+                    <button type="button" class="button button-primary admin-table-filter-search">Search</button>
+                  </div>
+                  <div>
+                    <span class="screen-reader-text"> </span>
+                    <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                  </div>
                 </div>
               </div>
               <table class="umbc-table admin-table" id="event-table">
@@ -246,23 +255,32 @@ foreach ($eventTypes as $eventType) {
               </section>
               <div class="umbc-table-wrapper">
                 <div class="admin-table-filter" data-table-id="schedule-table">
-                  <div class="admin-table-filter-row">
-                    <label class="admin-table-filter-label"><strong>Filter by</strong></label>
-                    <select class="admin-table-filter-column-select" aria-label="Select filter column for schedule-table">
-                      <option value=""></option>
-                      <option value="0">Tutor</option>
-                      <option value="1">Course</option>
-                      <option value="2">Day</option>
-                      <option value="3">Start Time</option>
-                      <option value="4">End Time</option>
-                    </select>
-                    <div class="admin-table-filter-search-wrap">
+                  <div class="admin-grid admin-grid--filter">
+                    <div>
+                      <label><strong>Filter by</strong></label>
+                      <select class="admin-table-filter-column-select" aria-label="Select filter column for schedule-table">
+                        <option value=""></option>
+                        <option value="0">Tutor</option>
+                        <option value="1">Course</option>
+                        <option value="2">Day</option>
+                        <option value="3">Start Time</option>
+                        <option value="4">End Time</option>
+                      </select>
+                    </div>
+                    <div class="admin-table-filter-search-field">
+                      <label class="admin-table-filter-value-label"><strong>Value</strong></label>
                       <select class="admin-table-filter-search-select" aria-label="Filter search for schedule-table" disabled>
                         <option value=""></option>
                       </select>
                     </div>
-                    <button type="button" class="button button-primary admin-table-filter-search">Search</button>
-                    <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                    <div>
+                      <span class="screen-reader-text"> </span>
+                      <button type="button" class="button button-primary admin-table-filter-search">Search</button>
+                    </div>
+                    <div>
+                      <span class="screen-reader-text"> </span>
+                      <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                    </div>
                   </div>
                 </div>
                 <table class="umbc-table admin-table" id="schedule-table">
@@ -368,22 +386,31 @@ foreach ($eventTypes as $eventType) {
               </section>
               <div class="umbc-table-wrapper">
                 <div class="admin-table-filter" data-table-id="account-table">
-                  <div class="admin-table-filter-row">
-                    <label class="admin-table-filter-label"><strong>Filter by</strong></label>
-                    <select class="admin-table-filter-column-select" aria-label="Select filter column for account-table">
-                      <option value=""></option>
-                      <option value="0">UMBC ID</option>
-                      <option value="1">Name</option>
-                      <option value="2">Email</option>
-                      <option value="3">Role</option>
-                    </select>
-                    <div class="admin-table-filter-search-wrap">
+                  <div class="admin-grid admin-grid--filter">
+                    <div>
+                      <label><strong>Filter by</strong></label>
+                      <select class="admin-table-filter-column-select" aria-label="Select filter column for account-table">
+                        <option value=""></option>
+                        <option value="0">UMBC ID</option>
+                        <option value="1">Name</option>
+                        <option value="2">Email</option>
+                        <option value="3">Role</option>
+                      </select>
+                    </div>
+                    <div class="admin-table-filter-search-field">
+                      <label class="admin-table-filter-value-label"><strong>Value</strong></label>
                       <select class="admin-table-filter-search-select" aria-label="Filter search for account-table" disabled>
                         <option value=""></option>
                       </select>
                     </div>
-                    <button type="button" class="button button-primary admin-table-filter-search">Search</button>
-                    <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                    <div>
+                      <span class="screen-reader-text"> </span>
+                      <button type="button" class="button button-primary admin-table-filter-search">Search</button>
+                    </div>
+                    <div>
+                      <span class="screen-reader-text"> </span>
+                      <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                    </div>
                   </div>
                 </div>
                 <table class="umbc-table admin-table" id="account-table">
@@ -459,27 +486,36 @@ foreach ($eventTypes as $eventType) {
                 </div>
               </section>
 
-              <section class="admin-subsection"">
+              <section class="admin-subsection">
                 <h3>Delete Schedule Entries by Course</h3>
                 <p>Select a course below to delete it and all associated schedule entries.</p>
                 <div class="umbc-table-wrapper">
                   <div class="admin-table-filter" data-table-id="import-course-table">
-                    <div class="admin-table-filter-row">
-                      <label class="admin-table-filter-label"><strong>Filter by</strong></label>
-                      <select class="admin-table-filter-column-select" aria-label="Select filter column for import-course-table">
-                        <option value=""></option>
-                        <option value="0">Subject</option>
-                        <option value="1">Course ID</option>
-                        <option value="2">Course Name</option>
-                        <option value="3">Times Offered</option>
-                      </select>
-                      <div class="admin-table-filter-search-wrap">
+                    <div class="admin-grid admin-grid--filter">
+                      <div>
+                        <label><strong>Filter by</strong></label>
+                        <select class="admin-table-filter-column-select" aria-label="Select filter column for import-course-table">
+                          <option value=""></option>
+                          <option value="0">Subject</option>
+                          <option value="1">Course ID</option>
+                          <option value="2">Course Name</option>
+                          <option value="3">Times Offered</option>
+                        </select>
+                      </div>
+                      <div class="admin-table-filter-search-field">
+                        <label class="admin-table-filter-value-label"><strong>Value</strong></label>
                         <select class="admin-table-filter-search-select" aria-label="Filter search for import-course-table" disabled>
                           <option value=""></option>
                         </select>
                       </div>
-                      <button type="button" class="button button-primary admin-table-filter-search">Search</button>
-                      <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                      <div>
+                        <span class="screen-reader-text"> </span>
+                        <button type="button" class="button button-primary admin-table-filter-search">Search</button>
+                      </div>
+                      <div>
+                        <span class="screen-reader-text"> </span>
+                        <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                      </div>
                     </div>
                   </div>
                   <table class="umbc-table admin-table" id="import-course-table">
@@ -518,7 +554,7 @@ foreach ($eventTypes as $eventType) {
               </p>
               <div class="admin-actions">
                 <button type="button" class="button button-primary" id="logs-fetch-btn">Fetch Logs</button>
-                <button type="button" class="button button-secondary" id="logs-export-btn" hidden>Export Logs</button>
+                <button type="button" class="button button-secondary" id="logs-export-btn" hidden>&#8595; Export Logs</button>
                 <span class="tutoring-admin-message" id="logs-message" hidden></span>
               </div>
               <div class="logs-viewer" id="logs-viewer" hidden>
@@ -527,10 +563,39 @@ foreach ($eventTypes as $eventType) {
                   <span class="logs-date-label" id="logs-date-label"></span>
                   <button type="button" class="button button-secondary" id="logs-next-btn" aria-label="Next week" disabled>Next &rarr;</button>
                   <div class="logs-jump">
-                    <label for="logs-jump-date"><strong>Jump To Date</strong></label>
-                    <span></span>
-                    <input type="date" id="logs-jump-date" aria-label="Jump to date" />
+                    <div class="logs-jump-input">
+                      <label for="logs-jump-date"><strong>Jump To Date</strong></label>
+                      <input type="date" id="logs-jump-date" aria-label="Jump to date" />
+                    </div>
                     <button type="button" class="button button-secondary" id="logs-jump-btn">Go</button>
+                  </div>
+                </div>
+                <div class="admin-table-filter" data-logs-filter="logs-box">
+                  <div class="admin-grid admin-grid--filter">
+                    <div>
+                      <label><strong>Filter by</strong></label>
+                      <select class="admin-table-filter-column-select" aria-label="Select filter for logs">
+                        <option value=""></option>
+                        <option value="role">Role</option>
+                        <option value="user">User</option>
+                        <option value="action">Action</option>
+                        <option value="type">Type</option>
+                      </select>
+                    </div>
+                    <div class="admin-table-filter-search-field">
+                      <label class="admin-table-filter-value-label"><strong>Value</strong></label>
+                      <select class="admin-table-filter-search-select" aria-label="Filter search for logs" disabled>
+                        <option value=""></option>
+                      </select>
+                    </div>
+                    <div>
+                      <span class="screen-reader-text"> </span>
+                      <button type="button" class="button button-primary admin-table-filter-search">Search</button>
+                    </div>
+                    <div>
+                      <span class="screen-reader-text"> </span>
+                      <button type="button" class="button button-secondary admin-table-filter-clear">Clear</button>
+                    </div>
                   </div>
                 </div>
                 <div class="logs-box" id="logs-box" role="log" aria-live="polite" aria-label="Audit log entries">

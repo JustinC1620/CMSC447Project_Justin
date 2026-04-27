@@ -1173,6 +1173,9 @@
             default => $action,
         };
 
+        $role = in_array(ADMIN_ROLE, $roles, true) ? "admin"
+              : (in_array(STAFF_ROLE, $roles, true) ? "staff" : "unknown");
+
         $format_fields = function(array $fields) use ($table): array {
             return array_filter(
                 array_map(fn($v) => $v === null ? null : ($table === "events" ? snake_to_capital_words($v) : $v), $fields),
@@ -1202,10 +1205,12 @@
         }
 
         return [
-            "date"   => $date_key,
-            "action" => $action,
-            "table"  => $table,
-            "lines"  => $lines,
+            "date"         => $date_key,
+            "action_label" => $action_label,
+            "table_label"  => $table_label,
+            "user"         => $actor,
+            "role"         => $role,
+            "lines"        => $lines,
         ];
     }
 

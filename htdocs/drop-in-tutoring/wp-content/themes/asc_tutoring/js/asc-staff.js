@@ -2,12 +2,6 @@
 // VALIDATION — BUBBLE & OUTLINE HELPERS
 // =============================================================================
 
-/**
- * Returns the visible anchor element for a field id.
- * - Select2 : the .select2-container injected next to the hidden <select>
- * - flatpickr: the <input> itself (flatpickr styles it as the trigger box)
- * - native   : the <input> / <select> itself
- */
 function getFieldAnchor(id) {
   const el = $(id);
   if (!el) return null;
@@ -27,29 +21,21 @@ function clearValidationBubble() {
   _bubbleCleanups = [];
 }
 
-/**
- * Show an Edge-style validation bubble anchored below (or above if near
- * the bottom of the viewport) the visible control for `fieldId`.
- * Dismisses on the first change/mousedown interaction with that field.
- */
 function showFieldError(fieldId, message) {
   clearValidationBubble();
 
   const anchor = getFieldAnchor(fieldId);
   if (!anchor) { showMessage(message, 'error'); return; }
 
-  // Red outline on the wrapping div (covers both native and custom widgets)
   const wrapper = anchor.closest('div') || anchor.parentElement;
   if (wrapper) wrapper.classList.add('field-invalid');
 
-  // Build bubble
   const bubble = document.createElement('div');
   bubble.className   = 'validation-bubble';
   bubble.textContent = message;
   document.body.appendChild(bubble);
   _activeBubble = bubble;
 
-  // Position
   function positionBubble() {
     const rect   = anchor.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -70,17 +56,14 @@ function showFieldError(fieldId, message) {
   window.addEventListener('resize', positionBubble);
   window.addEventListener('scroll', positionBubble, true);
 
-  // Dismiss helpers
   function dismiss() { clearValidationBubble(); }
 
-  // For Select2 fields listen to the jQuery change event
   const nativeEl = $(fieldId);
   if (nativeEl) {
     const handler = () => { dismiss(); if (wrapper) wrapper.classList.remove('field-invalid'); };
 
     nativeEl.addEventListener('change', handler, { once: true });
     nativeEl.addEventListener('input',  handler, { once: true });
-    // flatpickr / Select2 don't always fire native change; also catch mousedown on anchor
     anchor.addEventListener('mousedown', handler, { once: true });
 
     if (typeof jQuery !== 'undefined' && nativeEl.classList.contains('select2-hidden-accessible')) {
@@ -98,9 +81,7 @@ function showFieldError(fieldId, message) {
   }
 }
 
-/**
- * Remove all field-invalid outlines inside a form.
- */
+
 function clearFieldErrors(formEl) {
   formEl.querySelectorAll('.field-invalid').forEach(el => el.classList.remove('field-invalid'));
   clearValidationBubble();
@@ -120,7 +101,6 @@ const showMessage = (text, type = 'success') => {
     box.hidden      = false;
     setTimeout(() => { box.hidden = true; }, 4000);
   });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 const clearMessages = () => {
@@ -266,12 +246,12 @@ function setFlatpickrTime(instanceOrId, timeValue) {
     : instanceOrId;
   if (!fp) return;
   const d = timeStringToDate(timeValue);
-  if (d) { 
-    fp.setDate(d, true); 
+  if (d) {
+    fp.setDate(d, true);
   } else {
-     fp.clear();
-     fp.set('defaultHour', 12);
-     fp.set('defaultMinute', 0);
+    fp.clear();
+    fp.set('defaultHour', 12);
+    fp.set('defaultMinute', 0);
   }
 }
 
@@ -339,6 +319,28 @@ function initEventFields() {
 
   const showFieldGroup = (group) => {
     group.style.display = 'block';
+
+    // When a static flatpickr lives inside a hidden container, its hour/minute
+    // display inputs don't render until the container is visible. Redraw them
+    // now without touching selectedDates.
+    group.querySelectorAll('input').forEach(i => {
+      const fp = i._flatpickr;
+      if (!fp) return;
+      const hourInput = fp.calendarContainer?.querySelector('.flatpickr-hour');
+      const minInput  = fp.calendarContainer?.querySelector('.flatpickr-minute');
+      const ampmInput = fp.calendarContainer?.querySelector('.flatpickr-am-pm');
+      if (!hourInput) return;
+
+      if (fp.selectedDates.length) {
+        // A real value is set — re-apply it so the display matches
+        fp.setDate(fp.selectedDates[0], false);
+      } else {
+        // No value selected — paint the default 12:00 PM visually only
+        hourInput.value = '12';
+        minInput.value  = '00';
+        if (ampmInput) ampmInput.value = 'PM';
+      }
+    });
   };
 
   toggleEventFields = function () {
@@ -565,15 +567,24 @@ function initTableFilterHandlers(table) {
   const searchSelect = filter.querySelector('.admin-table-filter-search-select');
   const searchBtn    = filter.querySelector('.admin-table-filter-search');
   const clearBtn     = filter.querySelector('.admin-table-filter-clear');
+  const valueLabel   = filter.querySelector('.admin-table-filter-value-label');
 
   initTableFilterSelect2(columnSelect, 'Select column');
   initTableFilterSelect2(searchSelect, 'Start typing to search...');
+
+  const updateValueLabel = () => {
+    if (!valueLabel) return;
+    const selected = columnSelect.options[columnSelect.selectedIndex];
+    const text = selected?.value !== '' ? selected?.text?.trim() : '';
+    valueLabel.innerHTML = `<strong>${text || 'Value'}</strong>`;
+  };
 
   const handleColumnChange = () => {
     TABLE_FILTER_STATE[tableId].appliedColumnIndex = '';
     TABLE_FILTER_STATE[tableId].appliedQuery       = '';
     rebuildTableFilterSearchOptions(tableId, getTableFilterSelectValue(columnSelect));
     applyTableFilter(tableId);
+    updateValueLabel();
   };
 
   if (hasSelect2()) jQuery(columnSelect).on('select2:select select2:clear', handleColumnChange);
@@ -590,6 +601,7 @@ function initTableFilterHandlers(table) {
     setTableFilterSelectValue(columnSelect, '');
     resetTableFilterSearchSelect(searchSelect);
     applyTableFilter(tableId);
+    updateValueLabel();
   });
 }
 
@@ -743,7 +755,7 @@ function initEventSection(eventForm, setEventFormMode, resetEventForm) {
       let withinSchedule = false;
       for (const row of $$('#schedule-table tbody tr')) {
         if (Number(row.dataset.userId) !== userId) continue;
-        const rowDay = row.dataset.dayOfWeek; // stored as abbr or full — check both
+        const rowDay = row.dataset.dayOfWeek;
         const fullDay = DAY_UNABBR[rowDay] || rowDay;
         if (fullDay !== todayDow && rowDay !== todayAbbr) continue;
         if (leavingTime > row.dataset.startTime && leavingTime < row.dataset.endTime) {
@@ -770,13 +782,13 @@ function initEventSection(eventForm, setEventFormMode, resetEventForm) {
         return;
       }
       if (!finalDay) {
-        showFieldError('final_day', 'Please select a final date.');
-        showMessage('Error: Final Date is required for a called out event.', 'error');
+        showFieldError('final_day', 'Please select an end date.');
+        showMessage('Error: End Date is required for a called out event.', 'error');
         return;
       }
       if (finalDay < startDay) {
-        showFieldError('final_day', 'Final Date must be the same as or after Start Date.');
-        showMessage('Error: Final Date must be the same as or after Start Date.', 'error');
+        showFieldError('final_day', 'End Date cannot be before Start Date.');
+        showMessage('Error: End Date cannot be before Start Date.', 'error');
         return;
       }
     }
@@ -901,6 +913,7 @@ function initStaffUI() {
     loadEventIntoForm(row, setEventFormMode);
     captureEventFormSnapshot();
     showMessage(`Loaded event ${row.dataset.eventId} into the form.`, 'success');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   // --- Delete buttons (events) ---
@@ -922,6 +935,7 @@ function initStaffUI() {
     } catch (err) {
       showMessage(err.message, 'error');
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   // --- Reset button ---
@@ -939,10 +953,6 @@ function initStaffUI() {
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Remove native required attributes from all tutoring admin forms —
-  // validation is handled manually to support Select2 and flatpickr.
-  document.querySelectorAll('.tutoring-admin-form [required]').forEach(el => el.removeAttribute('required'));
-
   initEventTable();
   initStaffUI();
   initEventFields();
