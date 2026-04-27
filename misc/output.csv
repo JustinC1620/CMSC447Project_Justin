@@ -700,9 +700,9 @@ late
 leaving_early
 at_capacity
 events
-first_name,event_name,start_day,final_day,duration
+first_name,event_name,start_day,final_day,leaving_time
 Angela,late,0,NULL,NULL
-Shakib,leaving_early,0,NULL,30
+Shakib,leaving_early,0,NULL,1:30 p.m.
 Zoya,at_capacity,0,NULL,NULL
 Tristan,called_out,0,0,NULL
 Lillian,called_out,0,1,NULL

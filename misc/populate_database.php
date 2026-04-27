@@ -281,20 +281,21 @@ function populate_events($data, $ascPdo, &$users, &$eventTypes) {
         create_asc_events($ascPdo);
     
         $ascStmt = $ascPdo->prepare("INSERT INTO events 
-                                     (event_type, user_id, start_day, final_day, duration) 
+                                     (event_type, user_id, start_day, final_day, leaving_time) 
                                      VALUES 
-                                     (:event_type, :user_id, :start_day, :final_day, :duration)");
+                                     (:event_type, :user_id, :start_day, :final_day, :leaving_time)");
     }
 
     $data["start_day"] = create_datetime($data["start_day"]);
     $data["final_day"] = create_datetime($data["final_day"]);
+    $data["leaving_time"] = convert_time($data["leaving_time"]);
 
     $ascStmt->execute([
-        ":event_type" => $eventTypes[$data["event_name"]],
-        ":user_id"    => $users[$data["first_name"]],
-        ":start_day"  => $data["start_day"],
-        ":final_day"  => $data["final_day"],
-        ":duration"   => $data["duration"] !== "NULL" ? intval($data["duration"]) : null
+        ":event_type"   => $eventTypes[$data["event_name"]],
+        ":user_id"      => $users[$data["first_name"]],
+        ":start_day"    => $data["start_day"],
+        ":final_day"    => $data["final_day"],
+        ":leaving_time" => $data["leaving_time"]
     ]);
 
 }
@@ -414,6 +415,9 @@ function create_asc_schedule($ascPdo) {
 
 
 function convert_time($timeStr) {
+    if ($timeStr == "NULL") {
+        return null;
+    }
     if ($timeStr == "Noon") {
         $timeStr = "12:00:00";
     }
@@ -446,7 +450,7 @@ function create_asc_events($ascPdo) {
                    user_id bigint(20) UNSIGNED NOT NULL,
                    start_day date NOT NULL,
                    final_day date DEFAULT NULL,
-                   duration int(11) DEFAULT NULL) 
+                   leaving_time time DEFAULT NULL) 
                    ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     $ascPdo->exec("ALTER TABLE events
                    ADD PRIMARY KEY (event_id),
@@ -461,6 +465,7 @@ function create_asc_events($ascPdo) {
                    ADD CONSTRAINT fk_user_id_event FOREIGN KEY (user_id) REFERENCES wp_users (ID)");
     return;
 }
+
 
 function create_datetime($dayShift) {
     if ($dayShift != "NULL") {
