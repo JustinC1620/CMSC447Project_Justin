@@ -7,3 +7,4 @@
 !/misc
 !/misc/**
 *.log
+*.DS_Store

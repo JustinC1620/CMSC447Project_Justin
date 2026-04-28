@@ -147,10 +147,21 @@ function findTableRow(tableId, attr, id) {
   return qs(`#${tableId} tbody tr[data-${attr}="${id}"]`);
 }
 
+function adjustCourseCount(courseId, delta) {
+  const courseRow = qs(`#course-table tbody tr[data-course-id="${courseId}"]`);
+  if (!courseRow) return;
+  const newCount = Math.max(0, (Number(courseRow.dataset.courseCount) || 0) + delta);
+  courseRow.dataset.courseCount   = newCount;
+  courseRow.children[3].textContent = newCount;
+}
+
 function removeTableRow(entityLabel, id) {
   const attr    = entityLabel !== 'account' ? entityLabel : 'user';
   const tableId = `${entityLabel}-table`;
-  findTableRow(tableId, `${attr}-id`, id)?.remove();
+  const row     = findTableRow(tableId, `${attr}-id`, id);
+  if (!row) return;
+  if (entityLabel === 'schedule') adjustCourseCount(row.dataset.courseId, -1);
+  row.remove();
   reapplyTableFilter(tableId);
 }
 
@@ -163,14 +174,37 @@ function upsertTableRow(tableId, attr, id, rowHTML) {
   const newRow = temp.firstElementChild;
 
   const existing = findTableRow(tableId, attr, id);
-  existing ? existing.replaceWith(newRow) : tbody.prepend(newRow);
+  if (existing) {
+    if (tableId === 'schedule-table') {
+      const oldCourseId = existing.dataset.courseId;
+      const newCourseId = newRow.dataset.courseId;
+      if (oldCourseId !== newCourseId) {
+        adjustCourseCount(oldCourseId, -1);
+        adjustCourseCount(newCourseId, +1);
+      }
+    }
+    existing.replaceWith(newRow);
+  } else {
+    if (tableId === 'schedule-table') adjustCourseCount(newRow.dataset.courseId, +1);
+    tbody.prepend(newRow);
+  }
 
   reapplyTableFilter(tableId);
 }
 
 function removeTutorRelatedRows(userId) {
-  $$(`#event-table    tbody tr[data-user-id="${userId}"]`).forEach(r => r.remove());
-  $$(`#schedule-table tbody tr[data-user-id="${userId}"]`).forEach(r => r.remove());
+  $$(`#event-table tbody tr[data-user-id="${userId}"]`).forEach(r => r.remove());
+
+  const scheduleRows = Array.from($$(`#schedule-table tbody tr[data-user-id="${userId}"]`));
+  const affectedCourseIds = new Set(scheduleRows.map(r => r.dataset.courseId));
+  scheduleRows.forEach(r => r.remove());
+  affectedCourseIds.forEach(courseId => {
+    const remaining = $$(`#schedule-table tbody tr[data-course-id="${courseId}"]`).length;
+    const courseRow = qs(`#course-table tbody tr[data-course-id="${courseId}"]`);
+    if (!courseRow) return;
+    courseRow.dataset.courseCount     = remaining;
+    courseRow.children[3].textContent = remaining;
+  });
 }
 
 

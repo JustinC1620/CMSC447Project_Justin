@@ -496,11 +496,11 @@ foreach ($eventTypes as $eventType) {
                 <h3>Delete Schedule Entries by Course</h3>
                 <p>Select a course below to delete it and all associated schedule entries.</p>
                 <div class="umbc-table-wrapper">
-                  <div class="admin-table-filter" data-table-id="import-course-table">
+                  <div class="admin-table-filter" data-table-id="course-table">
                     <div class="admin-grid admin-grid--filter">
                       <div>
                         <label><strong>Filter by</strong></label>
-                        <select class="admin-table-filter-column-select" aria-label="Select filter column for import-course-table">
+                        <select class="admin-table-filter-column-select" aria-label="Select filter column for course-table">
                           <option value=""></option>
                           <option value="0">Subject</option>
                           <option value="1">Course ID</option>
@@ -510,7 +510,7 @@ foreach ($eventTypes as $eventType) {
                       </div>
                       <div class="admin-table-filter-search-field">
                         <label class="admin-table-filter-value-label"><strong>Value</strong></label>
-                        <select class="admin-table-filter-search-select" aria-label="Filter search for import-course-table" disabled>
+                        <select class="admin-table-filter-search-select" aria-label="Filter search for course-table" disabled>
                           <option value=""></option>
                         </select>
                       </div>
@@ -524,7 +524,7 @@ foreach ($eventTypes as $eventType) {
                       </div>
                     </div>
                   </div>
-                  <table class="umbc-table admin-table" id="import-course-table">
+                  <table class="umbc-table admin-table" id="course-table">
                     <thead>
                       <tr>
                         <th>Subject<span class="table-sort-arrows"><button type="button" class="sort-up" aria-label="Sort ascending">▲</button><button type="button" class="sort-down" aria-label="Sort descending">▼</button></span></th>
@@ -536,7 +536,7 @@ foreach ($eventTypes as $eventType) {
                     </thead>
                     <tbody>
                       <?php foreach ($mCourses as $course) : ?>
-                        <tr data-course-id="<?php echo esc_attr($course['course_id']); ?>">
+                        <tr data-course-id="<?php echo esc_attr($course['course_id']); ?>" data-course-count="<?php echo esc_attr($course['course_count'] ?? 0); ?>">
                           <td><?php echo esc_html($course['course_subject']); ?></td>
                           <td><?php echo esc_html($course['course_subject'] . ' ' . $course['course_code']); ?></td>
                           <td><?php echo esc_html($course['course_name']); ?></td>

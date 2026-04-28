@@ -190,6 +190,19 @@
     function clean_up_user($user_id) {
         global $wpdb;
 
+        $course_counts = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT course_id, COUNT(*) as cnt 
+                FROM schedule 
+                WHERE user_id = %d 
+                GROUP BY course_id",
+                $user_id
+            )
+        );
+        if ($course_counts === null) {
+            return new WP_Error("db_error", "Failed to query user schedule", ["status" => 500]);
+        }
+
         $result = $wpdb->delete("events", ["user_id" => $user_id], ["%d"]);
         if ($result === false) {
             return new WP_Error("db_error", "Failed to delete user events", ["status" => 500]);
@@ -200,6 +213,20 @@
             return new WP_Error("db_error", "Failed to delete user schedule", ["status" => 500]);
         }
 
+        foreach ($course_counts as $row) {
+            $updated = $wpdb->query(
+                $wpdb->prepare(
+                    "UPDATE courses 
+                    SET course_count = course_count - %d 
+                    WHERE course_id = %d",
+                    $row->cnt,
+                    $row->course_id
+                )
+            );
+            if ($updated === false) {
+                return new WP_Error("db_error", "Failed to update course count for course {$row->course_id}", ["status" => 500]);
+            }
+        }
         return true;
     }
 
@@ -632,7 +659,7 @@
             "sanitize_callback" => "absint",
         ];
     
-        register_rest_route("asc-tutoring/v1", "/course-schedule/(?P<course_id>\d+)", [
+        register_rest_route("asc-tutoring/v1", "/course/(?P<course_id>\d+)", [
             "methods"             => "DELETE",
             "callback"            => "delete_schedule_by_course",
             "permission_callback" => function() { return current_user_can("admin_control"); },
@@ -784,6 +811,7 @@
         $wpdb->query("COMMIT");
 
         invalidate_schedule_cache();
+        wp_cache_delete(M_COURSES_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
         return rest_ensure_response(["deleted" => true, "schedule_id" => $schedule_id]);
     }
@@ -863,6 +891,7 @@
         $wpdb->query("COMMIT");
 
         invalidate_schedule_cache();
+        if ($course_changed) wp_cache_delete(M_COURSES_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
         return rest_ensure_response(["updated" => true, "schedule_id" => $schedule_id]);
     }
@@ -1137,6 +1166,7 @@
         }
 
         wp_cache_delete(M_USERS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
+        wp_cache_delete(M_COURSES_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
 
         return rest_ensure_response(["deleted" => true, "user_id" => $user_id]);
     }
@@ -1187,7 +1217,9 @@
             $user->add_role($roles[1]);
         }
 
-        if (!in_array(TUTOR_ROLE, $roles, true) && $was_tutor) {
+        $tutor_removed = !in_array(TUTOR_ROLE, $roles, true) && $was_tutor;
+
+        if ($tutor_removed) {
             $cleaned = clean_up_user($user_id);
             if (is_wp_error($cleaned)) return rollback_error($cleaned->get_error_code(), $cleaned->get_error_message());
             invalidate_tutor_cache();
@@ -1202,7 +1234,7 @@
         $wpdb->query("COMMIT");
 
         wp_cache_delete(M_USERS_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
-
+        if ($tutor_removed) wp_cache_delete(M_COURSES_CACHE_KEY, MANAGEMENT_CACHE_GROUP);
         return rest_ensure_response(["updated" => true, "user_id" => $user_id]);
     }
 }
@@ -1225,6 +1257,7 @@
             "schedule" => "schedule entry",
             "events"   => "event",
             "wp_users" => "account",
+            "courses"  => "course",
             default    => $table,
         };
         $action_label = match($action) {
