@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 28, 2026 at 02:48 AM
+-- Generation Time: Apr 28, 2026 at 08:25 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -849,7 +849,7 @@ CREATE TABLE `wp_options` (
 --
 
 INSERT INTO `wp_options` (`option_id`, `option_name`, `option_value`, `autoload`) VALUES
-(1, 'cron', 'a:12:{i:1777337771;a:1:{s:34:\"wp_privacy_delete_old_export_files\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1777340751;a:1:{s:26:\"rediscache_discard_metrics\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1777362982;a:1:{s:21:\"wp_update_user_counts\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777366566;a:1:{s:16:\"wp_version_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777368366;a:1:{s:17:\"wp_update_plugins\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777370166;a:1:{s:16:\"wp_update_themes\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777406171;a:1:{s:32:\"recovery_mode_clean_expired_keys\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1777406182;a:2:{s:19:\"wp_scheduled_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}s:25:\"delete_expired_transients\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1777406184;a:1:{s:30:\"wp_scheduled_auto_draft_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1777752058;a:1:{s:30:\"wp_delete_temp_updater_backups\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}i:1777838171;a:1:{s:30:\"wp_site_health_scheduled_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}s:7:\"version\";i:2;}', 'on'),
+(1, 'cron', 'a:12:{i:1777401951;a:1:{s:26:\"rediscache_discard_metrics\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1777402571;a:1:{s:34:\"wp_privacy_delete_old_export_files\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1777406171;a:1:{s:32:\"recovery_mode_clean_expired_keys\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1777406182;a:3:{s:19:\"wp_scheduled_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}s:25:\"delete_expired_transients\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}s:21:\"wp_update_user_counts\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777406184;a:1:{s:30:\"wp_scheduled_auto_draft_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1777409766;a:1:{s:16:\"wp_version_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777411566;a:1:{s:17:\"wp_update_plugins\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777413366;a:1:{s:16:\"wp_update_themes\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1777485796;a:1:{s:25:\"tutoring_rebuild_snapshot\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1777752058;a:1:{s:30:\"wp_delete_temp_updater_backups\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}i:1777838171;a:1:{s:30:\"wp_site_health_scheduled_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}s:7:\"version\";i:2;}', 'on'),
 (2, 'siteurl', 'https://localhost/drop-in-tutoring', 'on'),
 (3, 'home', 'https://localhost/drop-in-tutoring', 'on'),
 (4, 'blogname', 'UMBC ASC Drop-In Tutoring Schedule', 'on'),
@@ -1027,7 +1027,8 @@ INSERT INTO `wp_options` (`option_id`, `option_name`, `option_value`, `autoload`
 (234, 'theme_switched', '', 'auto'),
 (237, 'WPLANG', '', 'auto'),
 (238, 'new_admin_email', 'justinc4@umbc.edu', 'auto'),
-(258, 'recovery_mode_email_last_sent', '1775362091', 'auto');
+(258, 'recovery_mode_email_last_sent', '1775362091', 'auto'),
+(315, 'tutoring_snapshot_token', 'E8X4F4b1yV1iTJptzYfDa78iHcdymbGr', 'off');
 
 -- --------------------------------------------------------
 
@@ -1740,7 +1741,8 @@ INSERT INTO `wp_usermeta` (`umeta_id`, `user_id`, `meta_key`, `meta_value`) VALU
 (51605, 3965, 'show_admin_bar_front', 'true'),
 (51606, 3965, 'locale', ''),
 (51607, 3965, 'wp_capabilities', 'a:1:{s:5:\"tutor\";b:1;}'),
-(51608, 3965, 'wp_user_level', '0');
+(51608, 3965, 'wp_user_level', '0'),
+(51609, 1, 'session_tokens', 'a:1:{s:64:\"8bcb4b6f811ecf15aad19b29488e8030e6ed1d182fb2761eb825acf148682883\";a:4:{s:10:\"expiration\";i:1777568864;s:2:\"ip\";s:3:\"::1\";s:2:\"ua\";s:125:\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0\";s:5:\"login\";i:1777396064;}}');
 
 -- --------------------------------------------------------
 
@@ -2008,7 +2010,7 @@ ALTER TABLE `wp_links`
 -- AUTO_INCREMENT for table `wp_options`
 --
 ALTER TABLE `wp_options`
-  MODIFY `option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=313;
+  MODIFY `option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=316;
 
 --
 -- AUTO_INCREMENT for table `wp_postmeta`
@@ -2044,7 +2046,7 @@ ALTER TABLE `wp_term_taxonomy`
 -- AUTO_INCREMENT for table `wp_usermeta`
 --
 ALTER TABLE `wp_usermeta`
-  MODIFY `umeta_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51609;
+  MODIFY `umeta_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51610;
 
 --
 -- AUTO_INCREMENT for table `wp_users`
@@ -2075,6 +2077,52 @@ ALTER TABLE `events`
 ALTER TABLE `schedule`
   ADD CONSTRAINT `fk_course_id` FOREIGN KEY (`course_id`) REFERENCES `courses` (`course_id`),
   ADD CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `wp_users` (`ID`);
+
+DELIMITER $$
+--
+-- Events
+--
+CREATE DEFINER=`root`@`localhost` EVENT `prune_expired_non_called_out_events` ON SCHEDULE EVERY 1 DAY STARTS '2026-04-29 00:00:00' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM events
+WHERE event_type != (
+    SELECT event_type_id
+    FROM event_types
+    WHERE event_name = 'called_out'
+    LIMIT 1
+)
+AND start_day < CURRENT_DATE$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `prune_expired_called_out_events` ON SCHEDULE EVERY 1 DAY STARTS '2026-04-29 00:00:00' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM events
+WHERE event_type = (
+    SELECT event_type_id
+    FROM event_types
+    WHERE event_name = 'called_out'
+    LIMIT 1
+)
+AND final_day IS NOT NULL
+AND final_day < CURRENT_DATE$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `prune_empty_schedule` ON SCHEDULE EVERY 1 DAY STARTS '2026-04-29 00:00:00' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM schedule
+WHERE course_id IN (
+    SELECT course_id
+    FROM courses
+    WHERE course_count <= 0
+)$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `prune_empty_courses` ON SCHEDULE EVERY 1 DAY STARTS '2026-04-29 00:00:00' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM courses
+WHERE course_count <= 0$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `prune_empty_subjects` ON SCHEDULE EVERY 1 DAY STARTS '2026-04-29 00:00:00' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM subjects
+WHERE subject_count <= 0$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `prune_schedule_audit_logs` ON SCHEDULE EVERY 1 DAY STARTS '2026-04-29 00:00:00' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM log
+WHERE table_name = 'schedule'
+AND time_stamp < NOW() - INTERVAL 30 DAY$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `prune_general_audit_logs` ON SCHEDULE EVERY 1 DAY STARTS '2026-04-29 00:00:00' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM log
+WHERE table_name != 'schedule'
+AND time_stamp < NOW() - INTERVAL 365 DAY$$
+
+DELIMITER ;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

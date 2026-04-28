@@ -35,6 +35,9 @@ const EVENT_TYPES = [
     "at_capacity"   => "4",
 ];
 
+const TUTORING_SNAPSHOT_PATH      = '/tutoring-snapshot.html';
+const TUTORING_PAGE_SLUG          = 'drop-in-tutoring';
+
 if (!function_exists("wp_delete_user")) {
     require_once ABSPATH . "wp-admin/includes/user.php";
 }
@@ -49,7 +52,7 @@ add_action('wp_enqueue_scripts', function() {
 
     if (!$is_tutoring_admin && !$is_tutoring) return;
 
-    // --- Shared: always loaded on both pages ---
+    // --- Shared ---
 
     wp_enqueue_script(
         'shared',
@@ -166,6 +169,52 @@ add_action("login_init", function() {
         exit;
     }
 });
+
+
+// --- Snapshot Generator ------------------------------------------------------
+
+function tutoring_generate_static_snapshot() {
+    $filepath = 
+    $page = get_page_by_path(TUTORING_PAGE_SLUG);
+    if (!$page) {
+        return;
+    }
+
+    global $wp, $wp_query;
+
+    ob_start();
+    
+    query_posts(['page_id' => $page->ID]);
+    
+    if (have_posts()) {
+        the_post();
+        define('TUTORING_IS_STATIC_RENDER', true);
+        include get_template_directory() . '/page-tutoring.php';
+    }
+    
+    wp_reset_query();
+    
+    $html = ob_get_clean();
+    error_log($html);
+    if (empty($html)) {
+        return;
+    }
+
+    file_put_contents(get_template_directory() . TUTORING_SNAPSHOT_PATH, $html);
+}
+
+// REBUILDS PAGE EVERY VISIT FOR TESTING
+// CHANGE TO MIDNIGHT ONCE EVERYTHING IS WORKING
+add_action('wp', function() {
+    wp_clear_scheduled_hook('tutoring_rebuild_snapshot');
+    if (!wp_next_scheduled('tutoring_rebuild_snapshot')) {
+        wp_clear_scheduled_hook('tutoring_rebuild_snapshot');
+        $midnight_et = new DateTime('now', new DateTimeZone('America/New_York'));
+        wp_schedule_event($midnight_et->getTimestamp(), 'daily', 'tutoring_rebuild_snapshot');
+    }
+});
+
+add_action('tutoring_rebuild_snapshot', 'tutoring_generate_static_snapshot');
 
 // Utility Functions
 //---------------------------------------------------------------------------------------------------------------------
@@ -717,3 +766,4 @@ add_action("login_init", function() {
     }
 }
 //---------------------------------------------------------------------------------------------------------------------
+
