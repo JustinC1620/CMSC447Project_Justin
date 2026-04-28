@@ -2080,3 +2080,32 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+SET GLOBAL event_scheduler = ON;
+CREATE EVENT IF NOT EXISTS prune_expired_events
+ON SCHEDULE EVERY 1 DAY
+STARTS (CURRENT_DATE + INTERVAL 1 DAY)
+DO
+BEGIN
+    DELETE FROM events
+    WHERE event_type != (SELECT event_type_id FROM event_types WHERE event_name = 'called_out')
+    AND start_day < CURRENT_DATE;
+
+    DELETE FROM events
+    WHERE event_type = (SELECT event_type_id FROM event_types WHERE event_name = 'called_out')
+    AND final_day IS NOT NULL
+    AND final_day < CURRENT_DATE;
+END;
+
+CREATE EVENT IF NOT EXISTS prune_empty_courses_and_subjects
+ON SCHEDULE EVERY 1 DAY
+STARTS (CURRENT_DATE + INTERVAL 1 DAY)
+DO
+BEGIN
+    DELETE FROM schedule
+    WHERE course_id IN (SELECT course_id FROM courses WHERE course_count <= 0);
+
+    DELETE FROM courses WHERE course_count <= 0;
+
+    DELETE FROM subjects WHERE subject_count <= 0;
+END;
