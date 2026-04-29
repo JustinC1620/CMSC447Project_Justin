@@ -24,12 +24,14 @@ function resolveCourseLabel(courseId, schedule) {
 function buildScheduleRow(s) {
   const userLabel   = resolveUserLabel(s.user_id, s.user_label);
   const courseLabel = resolveCourseLabel(s.course_id, s);
+  const courseShortLabel = qs(`#course-table tbody tr[data-course-id="${s.course_id}"]`)?.dataset.courseLabel || courseLabel;
 
   return `
     <tr
       data-schedule-id="${s.schedule_id}"
       data-user-id="${s.user_id}"
       data-course-id="${s.course_id}"
+      data-course-label="${courseShortLabel}"
       data-day-of-week="${DAY_ABBR[s.day_of_week] ?? s.day_of_week}"
       data-start-time="${s.start_time}"
       data-end-time="${s.end_time}"
@@ -73,6 +75,7 @@ function buildCourseRow(c) {
     <tr
       data-course-id="${c.course_id}"
       data-course-count="1"
+      data-course-label="${c.course_subject} ${c.course_code}"
     >
       <td>${c.course_subject}</td>
       <td>${c.course_subject} ${c.course_code}</td>
@@ -1330,7 +1333,12 @@ function initAdminUI() {
     const row = btn.closest('tr');
     if (!row) return;
     const id = row.dataset.scheduleId;
-    if (!confirm(`Delete schedule ${id}?`)) return;
+    const userLabel   = resolveUserLabel(row.dataset.userId);
+    const courseLabel = row.dataset.courseLabel || row.dataset.courseId;
+    const day         = DAY_UNABBR[row.dataset.dayOfWeek] || row.dataset.dayOfWeek;
+    const startTime   = formatDisplayTime(row.dataset.startTime);
+    const endTime     = formatDisplayTime(row.dataset.endTime);
+    if (!await confirmDelete(`Are you sure you want to delete ${userLabel}'s scheduled time for ${courseLabel} on ${day} from ${startTime} to ${endTime}?`)) return;
 
     try {
       await api.request(`/schedule/${id}`, 'DELETE');
@@ -1349,8 +1357,9 @@ function initAdminUI() {
     if (!btn) return;
     const row = btn.closest('tr');
     if (!row) return;
-    const id = row.dataset.userId;
-    if (!confirm(`Delete account ${id}?`)) return;
+    const id        = row.dataset.userId;
+    const userLabel = `${row.dataset.firstName} ${row.dataset.lastName}`.trim();
+    if (!await confirmDelete(`Are you sure you want to delete (${row.dataset.userLogin}) ${userLabel}'s account?`)) return;
 
     try {
       await api.request(`/accounts/${id}`, 'DELETE');
@@ -1372,8 +1381,10 @@ function initAdminUI() {
     if (!btn) return;
     const row = btn.closest('tr');
     if (!row) return;
-    const courseId = row.dataset.courseId;
-    if (!confirm(`Delete all schedule entries for course ${courseId}?`)) return;
+    const courseId    = row.dataset.courseId;
+    const courseLabel = row.dataset.courseLabel || courseId;
+    const courseCount = row.dataset.courseCount || 'all';
+    if (!await confirmDelete(`Are you sure you want to delete all ${courseCount} schedule entries for ${courseLabel}?`)) return;
 
     try {
       await api.request(`/course/${courseId}`, 'DELETE');

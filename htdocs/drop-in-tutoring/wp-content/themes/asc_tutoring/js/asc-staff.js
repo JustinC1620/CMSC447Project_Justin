@@ -958,7 +958,9 @@ function initStaffUI() {
     const row = btn.closest('tr');
     if (!row) return;
     const id = row.dataset.eventId;
-    if (!confirm(`Delete event ${id}?`)) return;
+    const userLabel      = resolveUserLabel(row.dataset.userId);
+    const eventTypeLabel = resolveEventTypeLabel(row.dataset.eventType);
+    if (!await confirmDelete(`Are you sure you want to delete ${userLabel}'s ${eventTypeLabel} event?`)) return;
 
     try {
       await api.request(`/events/${id}`, 'DELETE');
@@ -979,6 +981,70 @@ function initStaffUI() {
   // --- Event section ---
 
   initEventSection(eventForm, setEventFormMode, resetEventForm);
+}
+
+
+// =============================================================================
+// LABEL HELPERS
+// =============================================================================
+
+function resolveEventTypeLabel(eventType) {
+  return qs(`#event_type option[value="${eventType}"]`)?.textContent.trim() || String(eventType);
+}
+
+
+// =============================================================================
+// CONFIRM DELETE MODAL
+// =============================================================================
+
+let _confirmModal     = null;
+let _confirmResolve   = null;
+
+function initConfirmModal() {
+  if (_confirmModal) return;
+
+  const overlay = document.createElement('div');
+  overlay.id        = 'delete-confirm-overlay';
+  overlay.className = 'delete-confirm-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'delete-confirm-title');
+
+  overlay.innerHTML = `
+    <div class="delete-confirm-box">
+      <p id="delete-confirm-title" class="delete-confirm-title">Confirm Deletion</p>
+      <p id="delete-confirm-message" class="delete-confirm-message"></p>
+      <div class="delete-confirm-actions">
+        <button type="button" id="delete-confirm-ok" class="button button-primary">Delete</button>
+        <button type="button" id="delete-confirm-cancel" class="button button-secondary">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  _confirmModal = overlay;
+
+  const resolve = (result) => {
+    overlay.hidden = true;
+    if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+  };
+
+  document.getElementById('delete-confirm-ok').addEventListener('click',     () => resolve(true));
+  document.getElementById('delete-confirm-cancel').addEventListener('click',  () => resolve(false));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) resolve(false); });
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.hidden && e.key === 'Escape') resolve(false);
+  });
+
+  overlay.hidden = true;
+}
+
+function confirmDelete(message) {
+  initConfirmModal();
+  document.getElementById('delete-confirm-message').textContent = message;
+  _confirmModal.hidden = false;
+  document.getElementById('delete-confirm-ok').focus();
+  return new Promise(resolve => { _confirmResolve = resolve; });
 }
 
 

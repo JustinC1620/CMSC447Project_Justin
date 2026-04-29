@@ -110,11 +110,7 @@ try {
           <?php endforeach; ?>
         </ul>
         <div class="day-filter-strip">
-<<<<<<< HEAD
-          <h3>Filter Available Days</h3>
-=======
           <h3>Available Days</h3>
->>>>>>> @{-1}
           <div class="day-filter-days" role="group" aria-labelledby="day-filter-label">
             <?php
             $days = [

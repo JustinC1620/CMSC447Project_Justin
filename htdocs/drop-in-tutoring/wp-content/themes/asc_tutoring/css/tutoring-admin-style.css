@@ -678,3 +678,49 @@ input[readonly] {
     grid-column: 1 / -1;
   }
 }
+/* =============================================================================
+   DELETE CONFIRM MODAL
+   ============================================================================= */
+
+.delete-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-confirm-overlay[hidden] {
+  display: none !important;
+}
+
+.delete-confirm-box {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 450px;
+  margin: 1rem;
+  box-sizing: border-box;
+}
+
+.delete-confirm-title {
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem;
+}
+
+.delete-confirm-message {
+  margin: 0 0 1.25rem;
+  font-size: 1rem;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

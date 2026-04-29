@@ -305,6 +305,7 @@ foreach ($eventTypes as $eventType) {
                           data-schedule-id="<?php echo esc_attr($row['schedule_id']); ?>"
                           data-user-id="<?php echo esc_attr($row['user_id']); ?>"
                           data-course-id="<?php echo esc_attr($row['course_id']); ?>"
+                          data-course-label="<?php echo esc_attr($schedule_course ? trim($schedule_course['course_subject'] . ' ' . $schedule_course['course_code']) : $row['course_id']); ?>"
                           data-day-of-week="<?php echo esc_attr($row['day_of_week']); ?>"
                           data-start-time="<?php echo esc_attr($row['start_time']); ?>"
                           data-end-time="<?php echo esc_attr($row['end_time']); ?>"
@@ -536,7 +537,7 @@ foreach ($eventTypes as $eventType) {
                     </thead>
                     <tbody>
                       <?php foreach ($mCourses as $course) : ?>
-                        <tr data-course-id="<?php echo esc_attr($course['course_id']); ?>" data-course-count="<?php echo esc_attr($course['course_count'] ?? 0); ?>">
+                        <tr data-course-id="<?php echo esc_attr($course['course_id']); ?>" data-course-count="<?php echo esc_attr($course['course_count'] ?? 0); ?>" data-course-label="<?php echo esc_attr(trim($course['course_subject'] . ' ' . $course['course_code'])); ?>">
                           <td><?php echo esc_html($course['course_subject']); ?></td>
                           <td><?php echo esc_html($course['course_subject'] . ' ' . $course['course_code']); ?></td>
                           <td><?php echo esc_html($course['course_name']); ?></td>
