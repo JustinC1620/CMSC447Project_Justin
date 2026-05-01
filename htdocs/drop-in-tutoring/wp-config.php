@@ -91,7 +91,7 @@ define( 'WP_DEBUG_DISPLAY', true );
 
 /* Add any custom values between this line and the "stop editing" line. */
 
-
+define('TUTORING_FORCE_FALLBACK', false);
 
 /* That's all, stop editing! Happy publishing. */
 

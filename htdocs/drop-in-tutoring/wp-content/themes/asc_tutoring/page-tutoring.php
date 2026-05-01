@@ -2,16 +2,20 @@
 /*
 Template Name: Drop-In Tutoring
 */
-get_header();
+
 
 $static_file_path = get_template_directory() . TUTORING_SNAPSHOT_PATH;
 $is_static_render = defined('TUTORING_IS_STATIC_RENDER') && TUTORING_IS_STATIC_RENDER;
 
 try {
+    if (defined('TUTORING_FORCE_FALLBACK') && TUTORING_FORCE_FALLBACK) {
+        throw new \RuntimeException('Fallback test mode enabled');
+    }
     [$uSubjects, $uCourses, $uSchedule, $eventTypes, $uEvents] = user_query();
 } catch (Throwable $e) {
     if (file_exists($static_file_path)) {
         readfile($static_file_path);
+        exit;
     } else {
         get_template_part('sidebar', 'tutoring');
         echo '<main id="main" class="container"><div class="main-content">';
@@ -26,6 +30,7 @@ try {
     exit;
 }
 
+get_header();
 ?>
 <main id="main" class="container">
   <?php get_template_part('sidebar', 'tutoring'); ?>

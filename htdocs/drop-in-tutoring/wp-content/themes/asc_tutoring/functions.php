@@ -415,7 +415,6 @@ add_action('tutoring_rebuild_snapshot', 'tutoring_generate_static_snapshot');
             wp_cache_set(U_EVENTS_CACHE_KEY, $events_data, USER_CACHE_GROUP, HOUR_IN_SECONDS);
         }
         [$event_types, $u_events] = $events_data;
-
         return [$u_subjects, $u_courses, $u_schedule, $event_types, $u_events];
     }
 

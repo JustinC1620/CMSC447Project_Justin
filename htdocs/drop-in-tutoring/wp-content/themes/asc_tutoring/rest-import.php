@@ -29,13 +29,13 @@ const VALID_ROLES_IMPORT     = [TUTOR_ROLE, STAFF_ROLE];
 
         register_rest_route("asc-tutoring/v1", "/import/export", [
             "methods"             => "GET",
-            "callback"            => "import_export",
+            "callback"            => "export_schedule",
             "permission_callback" => function() { return current_user_can("admin_control"); },
         ]);
 
         register_rest_route("asc-tutoring/v1", "/import/template", [
             "methods"             => "GET",
-            "callback"            => "import_template",
+            "callback"            => "export_template",
             "permission_callback" => function() { return current_user_can("admin_control"); },
         ]);
     });
@@ -742,7 +742,7 @@ const VALID_ROLES_IMPORT     = [TUTOR_ROLE, STAFF_ROLE];
     }
 
 
-    function import_export(WP_REST_Request $request) {
+    function export_schedule(WP_REST_Request $request) {
         global $wpdb;
 
         // --- Subjects ---
@@ -872,7 +872,7 @@ const VALID_ROLES_IMPORT     = [TUTOR_ROLE, STAFF_ROLE];
     }
 
 
-    function import_template(WP_REST_Request $request) {
+    function export_template(WP_REST_Request $request) {
         $filename = "tutoring-import-template.csv";
         $stream   = fopen("php://temp", "r+");
 
