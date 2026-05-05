@@ -518,10 +518,28 @@ function applyTableFilter(tableId) {
 
   const query = normalizeFilterText(state.appliedQuery);
 
+  let visibleRows = 0;
+
   table.querySelectorAll('tbody tr').forEach(row => {
-    if (state.appliedColumnIndex === '' || !query) { row.hidden = false; return; }
+    if (state.appliedColumnIndex === '' || !query) {
+      row.hidden = false;
+      row.classList.toggle('row-even', visibleRows % 2 === 1);
+      row.classList.toggle('row-odd',  visibleRows % 2 === 0);
+      visibleRows++;
+      return;
+    }
+
     const cellValue = row.children[state.appliedColumnIndex]?.textContent?.trim() || '';
-    row.hidden = normalizeFilterText(cellValue) !== query;
+    const visible   = normalizeFilterText(cellValue) === query;
+    row.hidden      = !visible;
+
+    if (visible) {
+      row.classList.toggle('row-even', visibleRows % 2 === 1);
+      row.classList.toggle('row-odd',  visibleRows % 2 === 0);
+      visibleRows++;
+    } else {
+      row.classList.remove('row-even', 'row-odd');
+    }
   });
 }
 
@@ -698,7 +716,11 @@ function sortTable(table, columnIndex, ascending = true) {
       : String(bVal).localeCompare(String(aVal), undefined, { numeric: true });
   });
 
-  rows.forEach(row => tbody.appendChild(row));
+  rows.forEach((row, i) => {
+    row.classList.remove('row-odd', 'row-even');
+    row.classList.add(i % 2 === 0 ? 'row-odd' : 'row-even');
+    tbody.appendChild(row);
+  });
 }
 
 function initTableSortHandlers(table) {

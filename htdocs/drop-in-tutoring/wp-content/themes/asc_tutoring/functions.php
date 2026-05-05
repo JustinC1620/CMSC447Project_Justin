@@ -170,6 +170,14 @@ add_action("login_init", function() {
     }
 });
 
+add_action('wp_login_failed', function($username, $error) {
+    // Check if this came from a SAML/SSO flow
+    if (isset($_POST['SAMLResponse']) || isset($_GET['SAMLResponse'])) {
+        wp_redirect(home_url());
+        exit;
+    }
+}, 10, 2);
+
 
 // --- Snapshot Generator ------------------------------------------------------
 

@@ -113,6 +113,13 @@ input[type="date" i]:focus-visible {
   overflow: visible;
 }
 
+.entry-content .umbc-table-wrapper .umbc-table tbody tr.row-odd {
+  background: #fff;
+}
+.entry-content .umbc-table-wrapper .umbc-table tbody tr.row-even {
+  background: #f4f4f4;
+}
+
 .umbc-table-scroll {
   overflow-x: auto;
 }
@@ -590,10 +597,13 @@ input[readonly] {
 .admin-grid--filter {
   grid-template-columns: 200px 1fr auto auto;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .admin-grid--filter > div {
   position: relative;
+  min-width: 0;
 }
 
 .admin-grid--filter > div > label {

@@ -109,21 +109,39 @@ function initDayFilters() {
       const noAvailMsg = getOrCreateNoAvailMsg(wrapper);
       if (!table) return;
 
-      let currentDayCode = null;
-      let visibleRows    = 0;
+      let currentDayCode    = null;
+      let visibleRows       = 0;
+      let visibleDayGroups  = 0;
+      let inVisibleDayGroup = false;
 
       table.querySelectorAll('tbody tr').forEach(row => {
         const dayCell = row.querySelector('.tutoring-day-cell');
         if (dayCell) {
           currentDayCode = LABEL_TO_CODE[dayCell.textContent.trim()] ?? null;
+          const groupVisible = currentDayCode !== null && activeDays.has(currentDayCode);
+
+          if (groupVisible) {
+            dayCell.classList.toggle('row-even', visibleDayGroups % 2 === 1);
+            dayCell.classList.toggle('row-odd',  visibleDayGroups % 2 === 0);
+            visibleDayGroups++;
+          }
+
+          inVisibleDayGroup = groupVisible;
         }
-        const visible = currentDayCode !== null && activeDays.has(currentDayCode);
+
+        const visible = inVisibleDayGroup;
         row.style.display = visible ? '' : 'none';
-        if (visible) visibleRows++;
+
+        if (visible) {
+          row.classList.toggle('row-even', visibleRows % 2 === 1);
+          row.classList.toggle('row-odd',  visibleRows % 2 === 0);
+          visibleRows++;
+        } else {
+          row.classList.remove('row-even', 'row-odd');
+        }
       });
 
-      // Toggle the wrapper+table and the empty-state message
-      wrapper.style.display   = visibleRows > 0 ? '' : 'none';
+      wrapper.style.display    = visibleRows > 0 ? '' : 'none';
       noAvailMsg.style.display = visibleRows > 0 ? 'none' : '';
     });
 

@@ -143,3 +143,17 @@
 .tutoring-static-notice-body a {
   color: inherit;
 }
+
+.entry-content .umbc-table-wrapper .umbc-table tbody tr.row-odd {
+  background: #fff;
+}
+.entry-content .umbc-table-wrapper .umbc-table tbody tr.row-even {
+  background: #f4f4f4;
+}
+
+.entry-content .umbc-table-wrapper .umbc-table tbody td.tutoring-day-cell.row-odd {
+  background: #fff;
+}
+.entry-content .umbc-table-wrapper .umbc-table tbody td.tutoring-day-cell.row-even {
+  background: #f4f4f4;
+}

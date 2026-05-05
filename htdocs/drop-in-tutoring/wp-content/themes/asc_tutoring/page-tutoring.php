@@ -210,6 +210,8 @@ get_header();
                         <tbody>
                           <?php
                           $day_order = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+                          $visible_row_index = 0;
+                          $day_group_index   = 0;
                           foreach ($day_order as $day):
                             if (empty($days[$day])) {
                                 continue;
@@ -219,12 +221,12 @@ get_header();
                             $first_row = true;
                             foreach ($entries as $entry):
                           ?>
-                            <tr>
+                            <tr class="<?php echo $visible_row_index % 2 === 0 ? 'row-odd' : 'row-even'; ?>">
                               <?php if ($first_row): ?>
-                                <td rowspan="<?php echo esc_attr($rowspan); ?>" class="tutoring-day-cell">
+                                <td rowspan="<?php echo esc_attr($rowspan); ?>" class="tutoring-day-cell <?php echo $day_group_index % 2 === 0 ? 'row-odd' : 'row-even'; ?>">
                                   <?php echo esc_html(tutoring_day_label($day)); ?>
                                 </td>
-                              <?php $first_row = false; endif; ?>
+                              <?php endif; $first_row = false; ?>
                               <td><?php echo esc_html(tutoring_format_time($entry['start_time'])); ?></td>
                               <td><?php echo esc_html(tutoring_format_time($entry['end_time'])); ?></td>
                               <td><?php echo esc_html($entry['first_name']); ?></td>
@@ -262,7 +264,9 @@ get_header();
                               <?php endif; ?>
                             </tr>
                           <?php
+                            $visible_row_index++;
                             endforeach;
+                          $day_group_index++;
                           endforeach;
                           ?>
                         </tbody>

@@ -1353,6 +1353,7 @@
                     OR s.subject_name LIKE :search
                     OR c.course_code  LIKE :search
                     OR c.course_name  LIKE :search
+                    OR CONCAT(c.course_subject, ' ', c.course_code) LIKE :search
                 ORDER BY c.course_subject, c.course_code
             ");
             $stmt->bindValue(":search", $search, PDO::PARAM_STR);
@@ -1379,10 +1380,11 @@
                     umbc_email
                 FROM umbc_accounts
                 WHERE
-                    umbc_id    LIKE :search
+                    umbc_id       LIKE :search
                     OR first_name LIKE :search
                     OR last_name  LIKE :search
                     OR umbc_email LIKE :search
+                    OR CONCAT(first_name, ' ', last_name) LIKE :search
                 ORDER BY last_name, first_name, umbc_id
             ");
             $stmt->bindValue(":search", $search, PDO::PARAM_STR);
