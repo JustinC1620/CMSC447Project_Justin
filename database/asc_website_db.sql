@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 05, 2026 at 08:08 PM
+-- Generation Time: May 06, 2026 at 04:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -194,7 +194,19 @@ INSERT INTO `audit_log` (`log_id`, `user_login`, `action`, `table_name`, `table_
 (206, 'WB55131, Justin Collier', 'MOD', 'events', '12', '\"O\'Tega Adams\",\"called_out\",\"2026-05-06\",\"2026-05-11\",NULL', '\"O\'Tega Adams\",\"at_capacity\",\"2026-05-05\",NULL,NULL', '2026-05-05 17:44:18'),
 (207, 'WB55131, Justin Collier', 'DEL', 'events', '12', '\"O\'Tega Adams\",\"at_capacity\",\"2026-05-05\",NULL,NULL', NULL, '2026-05-05 17:44:25'),
 (208, 'WB55131, Justin Collier', 'CRE', 'events', '13', NULL, '\"Theo Ramirez\",\"called_out\",\"2026-05-06\",\"2026-05-07\",NULL', '2026-05-05 17:53:00'),
-(209, 'WB55131, Justin Collier', 'DEL', 'events', '13', '\"Theo Ramirez\",\"called_out\",\"2026-05-06\",\"2026-05-07\",NULL', NULL, '2026-05-05 17:53:27');
+(209, 'WB55131, Justin Collier', 'DEL', 'events', '13', '\"Theo Ramirez\",\"called_out\",\"2026-05-06\",\"2026-05-07\",NULL', NULL, '2026-05-05 17:53:27'),
+(210, 'WB55131, Justin Collier', 'MOD', 'schedule', '570', '\"Bridget Clark\",\"BIOL 101\",\"TUE\",\"13:00:00\",\"16:00:00\"', '\"Bridget Clark\",\"BIOL 101\",\"TUE\",\"13:00:00\",\"17:00:00\"', '2026-05-05 20:13:55'),
+(211, 'WB55131, Justin Collier', 'MOD', 'schedule', '569', '\"Lillian Nelson\",\"BIOL 101\",\"TUE\",\"12:00:00\",\"14:00:00\"', '\"Lillian Nelson\",\"BIOL 101\",\"TUE\",\"12:00:00\",\"17:00:00\"', '2026-05-05 20:14:03'),
+(212, 'WB55131, Justin Collier', 'MOD', 'schedule', '568', '\"Michael Baker\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"15:00:00\"', '\"Michael Baker\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"17:00:00\"', '2026-05-05 20:14:12'),
+(213, 'WB55131, Justin Collier', 'MOD', 'schedule', '567', '\"Shayan Taylor\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"15:00:00\"', '\"Shayan Taylor\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"17:00:00\"', '2026-05-05 20:14:20'),
+(214, 'WB55131, Justin Collier', 'MOD', 'events', '10', '\"Michael Baker\",\"leaving_early\",\"2026-05-05\",NULL,\"12:45:00\"', '\"Michael Baker\",\"leaving_early\",\"2026-05-05\",NULL,\"16:45:00\"', '2026-05-05 20:14:54'),
+(215, 'WB55131, Justin Collier', 'MOD', 'schedule', '4', '\"Zoya Campbell\",\"BIOL 101\",\"TUE\",\"13:00:00\",\"16:00:00\"', '\"Zoya Campbell\",\"BIOL 101\",\"TUE\",\"13:00:00\",\"17:00:00\"', '2026-05-05 20:15:42'),
+(216, 'WB55131, Justin Collier', 'MOD', 'schedule', '571', '\"Akanksha Baker\",\"BIOL 101\",\"TUE\",\"12:00:00\",\"17:00:00\"', '\"Akanksha Baker\",\"BIOL 101\",\"TUE\",\"12:00:00\",\"18:00:00\"', '2026-05-05 20:39:44'),
+(217, 'WB55131, Justin Collier', 'MOD', 'schedule', '570', '\"Bridget Clark\",\"BIOL 101\",\"TUE\",\"13:00:00\",\"17:00:00\"', '\"Bridget Clark\",\"BIOL 101\",\"TUE\",\"13:00:00\",\"18:00:00\"', '2026-05-05 20:39:50'),
+(218, 'WB55131, Justin Collier', 'MOD', 'schedule', '569', '\"Lillian Nelson\",\"BIOL 101\",\"TUE\",\"12:00:00\",\"17:00:00\"', '\"Lillian Nelson\",\"BIOL 101\",\"TUE\",\"12:00:00\",\"18:00:00\"', '2026-05-05 20:39:56'),
+(219, 'WB55131, Justin Collier', 'MOD', 'schedule', '568', '\"Michael Baker\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"17:00:00\"', '\"Michael Baker\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"18:00:00\"', '2026-05-05 20:40:02'),
+(220, 'WB55131, Justin Collier', 'MOD', 'schedule', '567', '\"Shayan Taylor\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"17:00:00\"', '\"Shayan Taylor\",\"BIOL 101\",\"TUE\",\"11:00:00\",\"18:00:00\"', '2026-05-05 20:40:08'),
+(221, 'WB55131, Justin Collier', 'MOD', 'events', '10', '\"Michael Baker\",\"leaving_early\",\"2026-05-05\",NULL,\"16:45:00\"', '\"Michael Baker\",\"leaving_early\",\"2026-05-05\",NULL,\"17:30:00\"', '2026-05-05 20:40:22');
 
 -- --------------------------------------------------------
 
@@ -308,7 +320,7 @@ INSERT INTO `events` (`event_id`, `event_type`, `user_id`, `start_day`, `final_d
 (7, 2, 4043, '2026-05-05', NULL, NULL),
 (8, 1, 4043, '2026-05-06', '2026-05-06', NULL),
 (9, 3, 4044, '2026-05-05', NULL, '14:45:00'),
-(10, 3, 4037, '2026-05-05', NULL, '12:45:00'),
+(10, 3, 4037, '2026-05-05', NULL, '17:30:00'),
 (11, 2, 4018, '2026-05-05', NULL, NULL);
 
 -- --------------------------------------------------------
@@ -355,7 +367,7 @@ INSERT INTO `schedule` (`schedule_id`, `user_id`, `course_id`, `day_of_week`, `s
 (1, 4048, 10000, 'MON', '11:00:00', '13:00:00'),
 (2, 4014, 10000, 'MON', '16:00:00', '17:00:00'),
 (3, 4043, 10000, 'TUE', '12:00:00', '13:00:00'),
-(4, 4052, 10000, 'TUE', '13:00:00', '16:00:00'),
+(4, 4052, 10000, 'TUE', '13:00:00', '17:00:00'),
 (5, 4050, 10000, 'WED', '11:30:00', '13:00:00'),
 (6, 4032, 10000, 'WED', '13:00:00', '14:00:00'),
 (7, 4014, 10000, 'WED', '16:30:00', '18:00:00'),
@@ -918,11 +930,11 @@ INSERT INTO `schedule` (`schedule_id`, `user_id`, `course_id`, `day_of_week`, `s
 (564, 4013, 10063, 'TUE', '15:00:00', '16:30:00'),
 (565, 4013, 10063, 'WED', '13:00:00', '14:00:00'),
 (566, 4021, 10063, 'WED', '14:00:00', '16:00:00'),
-(567, 4044, 10000, 'TUE', '11:00:00', '15:00:00'),
-(568, 4037, 10000, 'TUE', '11:00:00', '15:00:00'),
-(569, 4032, 10000, 'TUE', '12:00:00', '14:00:00'),
-(570, 4018, 10000, 'TUE', '13:00:00', '16:00:00'),
-(571, 4013, 10000, 'TUE', '12:00:00', '17:00:00');
+(567, 4044, 10000, 'TUE', '11:00:00', '18:00:00'),
+(568, 4037, 10000, 'TUE', '11:00:00', '18:00:00'),
+(569, 4032, 10000, 'TUE', '12:00:00', '18:00:00'),
+(570, 4018, 10000, 'TUE', '13:00:00', '18:00:00'),
+(571, 4013, 10000, 'TUE', '12:00:00', '18:00:00');
 
 -- --------------------------------------------------------
 
@@ -1038,7 +1050,7 @@ CREATE TABLE `wp_options` (
 --
 
 INSERT INTO `wp_options` (`option_id`, `option_name`, `option_value`, `autoload`) VALUES
-(1, 'cron', 'a:12:{i:1778003771;a:1:{s:34:\"wp_privacy_delete_old_export_files\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1778006751;a:1:{s:26:\"rediscache_discard_metrics\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1778010971;a:1:{s:32:\"recovery_mode_clean_expired_keys\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1778010982;a:3:{s:19:\"wp_scheduled_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}s:25:\"delete_expired_transients\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}s:21:\"wp_update_user_counts\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778010984;a:1:{s:30:\"wp_scheduled_auto_draft_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1778014566;a:1:{s:16:\"wp_version_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778016366;a:1:{s:17:\"wp_update_plugins\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778018166;a:1:{s:16:\"wp_update_themes\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778090022;a:1:{s:25:\"tutoring_rebuild_snapshot\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1778356858;a:1:{s:30:\"wp_delete_temp_updater_backups\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}i:1778442971;a:1:{s:30:\"wp_site_health_scheduled_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}s:7:\"version\";i:2;}', 'on'),
+(1, 'cron', 'a:13:{i:1778035551;a:1:{s:26:\"rediscache_discard_metrics\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1778036171;a:1:{s:34:\"wp_privacy_delete_old_export_files\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"hourly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:3600;}}}i:1778054182;a:1:{s:21:\"wp_update_user_counts\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778057766;a:1:{s:16:\"wp_version_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778059566;a:1:{s:17:\"wp_update_plugins\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778061366;a:1:{s:16:\"wp_update_themes\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:10:\"twicedaily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:43200;}}}i:1778097371;a:1:{s:32:\"recovery_mode_clean_expired_keys\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1778097382;a:2:{s:19:\"wp_scheduled_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}s:25:\"delete_expired_transients\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1778097384;a:1:{s:30:\"wp_scheduled_auto_draft_delete\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1778119005;a:1:{s:25:\"tutoring_rebuild_snapshot\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:5:\"daily\";s:4:\"args\";a:0:{}s:8:\"interval\";i:86400;}}}i:1778356858;a:1:{s:30:\"wp_delete_temp_updater_backups\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}i:1778442971;a:1:{s:30:\"wp_site_health_scheduled_check\";a:1:{s:32:\"40cd750bba9870f18aada2478b24840a\";a:3:{s:8:\"schedule\";s:6:\"weekly\";s:4:\"args\";a:0:{}s:8:\"interval\";i:604800;}}}s:7:\"version\";i:2;}', 'on'),
 (2, 'siteurl', 'https://localhost/drop-in-tutoring', 'on'),
 (3, 'home', 'https://localhost/drop-in-tutoring', 'on'),
 (4, 'blogname', 'UMBC ASC Drop-In Tutoring Schedule', 'on'),
@@ -1247,16 +1259,6 @@ INSERT INTO `wp_postmeta` (`meta_id`, `post_id`, `meta_key`, `meta_value`) VALUE
 (28, 19, 'footnotes', ''),
 (29, 20, '_edit_lock', '1775316812:1'),
 (30, 20, '_wp_page_template', 'login.php'),
-(31, 22, '_edit_lock', '1775315634:1'),
-(32, 22, '_wp_page_template', 'my_umbc_login.php'),
-(33, 22, '_wp_trash_meta_status', 'publish'),
-(34, 22, '_wp_trash_meta_time', '1775314878'),
-(35, 22, '_wp_desired_post_slug', 'myumbc-login-page'),
-(37, 25, '_edit_lock', '1775315370:1'),
-(38, 25, '_wp_page_template', 'my_umbc_login.php'),
-(39, 25, '_wp_trash_meta_status', 'publish'),
-(40, 25, '_wp_trash_meta_time', '1775315372'),
-(41, 25, '_wp_desired_post_slug', 'my_umbc-login-page'),
 (42, 27, 'footnotes', '');
 
 -- --------------------------------------------------------
@@ -1306,10 +1308,6 @@ INSERT INTO `wp_posts` (`ID`, `post_author`, `post_date`, `post_date_gmt`, `post
 (19, 1, '2026-04-02 01:09:11', '2026-04-02 01:09:11', '', 'Drop-In Tutoring', '', 'inherit', 'closed', 'closed', '', '8-autosave-v1', '', '', '2026-04-02 01:09:11', '2026-04-02 01:09:11', '', 8, 'https://localhost/drop-in-tutoring/?p=19', 0, 'revision', '', 0),
 (20, 1, '2026-04-04 14:47:51', '2026-04-04 14:47:51', '', 'Login Page', '', 'publish', 'closed', 'closed', '', 'login-page', '', '', '2026-04-04 14:47:51', '2026-04-04 14:47:51', '', 0, 'https://localhost/drop-in-tutoring/?page_id=20', 0, 'page', '', 0),
 (21, 1, '2026-04-04 14:47:51', '2026-04-04 14:47:51', '', 'Login Page', '', 'inherit', 'closed', 'closed', '', '20-revision-v1', '', '', '2026-04-04 14:47:51', '2026-04-04 14:47:51', '', 20, 'https://localhost/drop-in-tutoring/?p=21', 0, 'revision', '', 0),
-(22, 1, '2026-04-04 14:58:52', '2026-04-04 14:58:52', '', 'myUMBC Login Page', '', 'trash', 'closed', 'closed', '', 'myumbc-login-page__trashed', '', '', '2026-04-04 15:01:18', '2026-04-04 15:01:18', '', 0, 'https://localhost/drop-in-tutoring/?page_id=22', 0, 'page', '', 0),
-(23, 1, '2026-04-04 14:58:52', '2026-04-04 14:58:52', '', 'myUMBC Login Page', '', 'inherit', 'closed', 'closed', '', '22-revision-v1', '', '', '2026-04-04 14:58:52', '2026-04-04 14:58:52', '', 22, 'https://localhost/drop-in-tutoring/?p=23', 0, 'revision', '', 0),
-(25, 1, '2026-04-04 15:08:40', '2026-04-04 15:08:40', '', 'my_UMBC Login Page', '', 'trash', 'closed', 'closed', '', 'my_umbc-login-page__trashed', '', '', '2026-04-04 15:09:32', '2026-04-04 15:09:32', '', 0, 'https://localhost/drop-in-tutoring/?page_id=25', 0, 'page', '', 0),
-(26, 1, '2026-04-04 15:08:40', '2026-04-04 15:08:40', '', 'my_UMBC Login Page', '', 'inherit', 'closed', 'closed', '', '25-revision-v1', '', '', '2026-04-04 15:08:40', '2026-04-04 15:08:40', '', 25, 'https://localhost/drop-in-tutoring/?p=26', 0, 'revision', '', 0),
 (27, 1, '2026-04-04 15:12:01', '2026-04-04 15:12:01', '', 'Login Page', '', 'inherit', 'closed', 'closed', '', '20-autosave-v1', '', '', '2026-04-04 15:12:01', '2026-04-04 15:12:01', '', 20, 'https://localhost/drop-in-tutoring/?p=27', 0, 'revision', '', 0);
 
 -- --------------------------------------------------------
@@ -2009,7 +2007,7 @@ INSERT INTO `wp_usermeta` (`umeta_id`, `user_id`, `meta_key`, `meta_value`) VALU
 (52778, 4055, 'locale', ''),
 (52779, 4055, 'wp_capabilities', 'a:1:{s:9:\"asc_admin\";b:1;}'),
 (52780, 4055, 'wp_user_level', '0'),
-(52783, 4053, 'session_tokens', 'a:1:{s:64:\"eeb0a54c8b6d1b784aa72a852b1079dea33b586bdb4ccb8ad377368b0bb90191\";a:4:{s:10:\"expiration\";i:1778176336;s:2:\"ip\";s:3:\"::1\";s:2:\"ua\";s:125:\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0\";s:5:\"login\";i:1778003536;}}');
+(52783, 4053, 'session_tokens', 'a:2:{s:64:\"eeb0a54c8b6d1b784aa72a852b1079dea33b586bdb4ccb8ad377368b0bb90191\";a:4:{s:10:\"expiration\";i:1778176336;s:2:\"ip\";s:3:\"::1\";s:2:\"ua\";s:125:\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0\";s:5:\"login\";i:1778003536;}s:64:\"baaf66e20bb3f476ca7910bea097b66af33d543b4d05db0833792179d8abb885\";a:4:{s:10:\"expiration\";i:1778199230;s:2:\"ip\";s:3:\"::1\";s:2:\"ua\";s:125:\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0\";s:5:\"login\";i:1778026430;}}');
 
 -- --------------------------------------------------------
 
@@ -2241,7 +2239,7 @@ ALTER TABLE `wp_users`
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `log_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=210;
+  MODIFY `log_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=222;
 
 --
 -- AUTO_INCREMENT for table `events`
@@ -2283,7 +2281,7 @@ ALTER TABLE `wp_links`
 -- AUTO_INCREMENT for table `wp_options`
 --
 ALTER TABLE `wp_options`
-  MODIFY `option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=318;
+  MODIFY `option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=320;
 
 --
 -- AUTO_INCREMENT for table `wp_postmeta`

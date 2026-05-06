@@ -69,7 +69,6 @@ function buildAccountRow(a) {
     </tr>`;
 }
 
-
 function buildCourseRow(c) {
   return `
     <tr
@@ -86,9 +85,6 @@ function buildCourseRow(c) {
       </td>
     </tr>`;
 }
-
-
-
 
 function initScheduleFlatpickr() {
   if (typeof flatpickr === 'undefined') return;
@@ -312,7 +308,6 @@ function clearScheduleFormSnapshot() {
 }
 
 function initScheduleSection(scheduleForm, scheduleCourseLookup, setScheduleFormMode, resetScheduleForm, SCHEDULE_FIELD_IDS) {
-  // --- Course lookup dropdown (non-Select2 fallback) ---
 
   on(scheduleCourseLookup, 'change', () => {
     if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') return;
@@ -325,8 +320,6 @@ function initScheduleSection(scheduleForm, scheduleCourseLookup, setScheduleForm
     }
     try { setVal('schedule_course_id', JSON.parse(scheduleCourseLookup.value).course_id || ''); } catch (_) {}
   });
-
-  // --- UMBC course search ---
 
   const searchUmbcCourses = (query) => searchUmbc({
     endpoint:      `/umbc_db/courses?search_str=${encodeURIComponent(query)}`,
@@ -455,7 +448,7 @@ function initScheduleSection(scheduleForm, scheduleCourseLookup, setScheduleForm
       }
     }
 
-    // ---- Edit mode: require at least one changed field ----
+    // ---- Edit mode ----
     if (isEdit && _scheduleFormSnapshot) {
       const current = {
         user_id:     String(payload.user_id),
@@ -530,7 +523,6 @@ function initScheduleSection(scheduleForm, scheduleCourseLookup, setScheduleForm
 // ADMIN PANEL — ACCOUNT SECTION
 // =============================================================================
 
-// Snapshot of account form values loaded during edit
 let _accountFormSnapshot = null;
 
 function captureAccountFormSnapshot(accountForm) {
@@ -549,7 +541,6 @@ function clearAccountFormSnapshot() {
 }
 
 function initAccountSection(accountForm, accountLookupResults, setAccountFormMode, resetAccountForm, ACCOUNT_FIELD_IDS) {
-  // --- UMBC account search ---
 
   const searchUmbcAccounts = (query) => searchUmbc({
     endpoint:      `/umbc_db/accounts?search_str=${encodeURIComponent(query)}`,
@@ -627,7 +618,7 @@ function initAccountSection(accountForm, accountLookupResults, setAccountFormMod
       return;
     }
 
-    // ---- Edit mode: require at least one changed field ----
+    // ---- Edit mode ----
     if (isEdit && _accountFormSnapshot) {
       const current = {
         user_login,
@@ -773,6 +764,8 @@ function initLogsUI() {
 
     prevBtn.disabled = endKey <= oldestDate;
     nextBtn.disabled = startKey >= todayKey;
+
+    return startKey;
   }
 
   function buildExport() {
@@ -822,8 +815,13 @@ function initLogsUI() {
   on(jumpBtn, 'click', () => {
     const val = jumpInput?.value;
     if (!val) { showMessage('Select a date first.', 'error'); return; }
-    renderWindow(val);
-    showMessage(`Jumped to week of ${formatLabel(val)}.`);
+    const actual = renderWindow(val);
+    if (actual !== val) {
+      const bound = actual === toDateKey(new Date()) ? 'most recent' : 'oldest';
+      showMessage(`${formatLabel(val)} is out of range — showing ${bound} available day (${formatLabel(actual)}).`, 'error');
+    } else {
+      showMessage(`Jumped to week of ${formatLabel(val)}.`);
+    }
   });
 
   initLogsFilter();
