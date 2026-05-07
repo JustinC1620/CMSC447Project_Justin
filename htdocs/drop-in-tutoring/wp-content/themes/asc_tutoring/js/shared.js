@@ -58,7 +58,7 @@ function formatDisplayTime(timeValue) {
 }
 
 function formatDisplayRole(role) {
-  return role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return role.split('_').map(w => w === 'asc' ? 'ASC' : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 

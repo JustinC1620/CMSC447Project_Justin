@@ -86,6 +86,42 @@ function buildCourseRow(c) {
     </tr>`;
 }
 
+// =============================================================================
+// ADMIN PANEL — SYNC TUTOR SELECT OPTIONS
+// =============================================================================
+
+function upsertUserSelectOption(userId, label) {
+  ['event_user_id', 'schedule_user_id'].forEach(selectId => {
+    const select = $(selectId);
+    if (!select) return;
+
+    let option = select.querySelector(`option[value="${userId}"]`);
+    if (option) {
+      option.textContent = label;
+    } else {
+      option             = document.createElement('option');
+      option.value       = userId;
+      option.textContent = label;
+      // Insert alphabetically among existing options, skipping the blank placeholder
+      const options = Array.from(select.options);
+      const after   = options.find(o => o.value !== '' && o.textContent.localeCompare(label) > 0);
+      after ? select.insertBefore(option, after) : select.appendChild(option);
+    }
+
+    if (hasSelect2()) jQuery(`#${selectId}`).trigger('change.select2');
+  });
+}
+
+function removeUserSelectOption(userId) {
+  ['event_user_id', 'schedule_user_id'].forEach(selectId => {
+    const select = $(selectId);
+    if (!select) return;
+    select.querySelector(`option[value="${userId}"]`)?.remove();
+    if (hasSelect2()) jQuery(`#${selectId}`).trigger('change.select2');
+  });
+}
+
+
 function initScheduleFlatpickr() {
   if (typeof flatpickr === 'undefined') return;
 
@@ -634,15 +670,31 @@ function initAccountSection(accountForm, accountLookupResults, setAccountFormMod
       }
     }
 
-    const payload = { user_login, user_email, first_name, last_name, roles };
+    const TUTOR_ROLE  = 'tutor';
+    const userLabel   = `${first_name} ${last_name} (${user_login})`;
+    const hasTutor    = roles.includes(TUTOR_ROLE);
+    const payload     = { user_login, user_email, first_name, last_name, roles };
     try {
       if (isEdit) {
         await api.request(`/accounts/${id}`, 'PATCH', payload);
         upsertTableRow('account-table', 'user-id', id, buildAccountRow({ ...payload, user_id: id }));
+
+        const oldRoles = (_accountFormSnapshot?.roles || '').split(',').map(r => r.trim()).filter(Boolean);
+        const hadTutor = oldRoles.includes(TUTOR_ROLE);
+        if (hadTutor && !hasTutor) {
+          // Tutor role removed — clean up their rows and dropdown entry
+          removeTutorRelatedRows(id);
+          removeUserSelectOption(id);
+        } else if (hasTutor) {
+          // Still a tutor — keep option label in sync in case name changed
+          upsertUserSelectOption(id, userLabel);
+        }
+
         showMessage(`Updated account ${id}.`);
       } else {
         const data = await api.request('/accounts', 'POST', payload);
         upsertTableRow('account-table', 'user-id', data.user_id, buildAccountRow({ ...payload, user_id: data.user_id }));
+        if (hasTutor) upsertUserSelectOption(data.user_id, userLabel);
         showMessage(`Created account ${data.user_id}.`);
       }
       clearAccountFormSnapshot();
@@ -1186,8 +1238,9 @@ function initImportUI() {
         `${imp.subjects} subject${pluralSuffix(imp.subjects)}, ` +
         `${imp.courses} course${pluralSuffix(imp.courses)}, ` +
         `${imp.users} user${pluralSuffix(imp.users)}, ` +
-        `${imp.schedule} schedule entr${imp.schedule !== 1 ? 'ies' : 'y'} loaded.`,
-        'success'
+        `${imp.schedule} schedule entr${imp.schedule !== 1 ? 'ies' : 'y'} loaded.` +
+        "<br> Refresh page to load changes.",
+        'success', true
       );
     } else {
       showMessage('Import failed. Please try again or contact an administrator.', 'error');
@@ -1362,6 +1415,7 @@ function initAdminUI() {
     try {
       await api.request(`/accounts/${id}`, 'DELETE');
       removeTutorRelatedRows(id);
+      removeUserSelectOption(id);
       removeTableRow('account', id);
       clearAccountFormSnapshot();
       resetAccountForm();

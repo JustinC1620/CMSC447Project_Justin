@@ -94,11 +94,15 @@ function clearFieldErrors(formEl) {
 
 const messageBoxes = $$('.tutoring-admin-message');
 
-const showMessage = (text, type = 'success') => {
+const showMessage = (text, type = 'success', allowHtml = false) => {
   messageBoxes.forEach(box => {
-    box.textContent = text;
-    box.className   = `tutoring-admin-message ${type}`;
-    box.hidden      = false;
+    if (allowHtml) {
+      box.innerHTML = text;
+    } else {
+      box.textContent = text;
+    }
+    box.className = `tutoring-admin-message ${type}`;
+    box.hidden    = false;
     setTimeout(() => { box.hidden = true; }, 4000);
   });
 };
@@ -227,7 +231,12 @@ function resolveUserLabel(userId, fallback) {
   const userRow  = qs(`#account-table tr[data-user-id="${userId}"]`);
   const nameCell = userRow?.children[1]?.textContent?.trim();
   const idCell   = userRow?.children[0]?.textContent?.trim();
-  return nameCell ? `${nameCell}${idCell ? ` (${idCell})` : ''}` : String(userId);
+  if (nameCell) return `${nameCell}${idCell ? ` (${idCell})` : ''}`;
+
+  const option = qs(`#event_user_id option[value="${userId}"]`);
+  if (option?.textContent?.trim()) return option.textContent.trim();
+
+  return String(userId);
 }
 
 function buildEventRow(e) {
@@ -716,9 +725,13 @@ function sortTable(table, columnIndex, ascending = true) {
       : String(bVal).localeCompare(String(aVal), undefined, { numeric: true });
   });
 
-  rows.forEach((row, i) => {
+  let visibleCount = 0;
+  rows.forEach((row) => {
     row.classList.remove('row-odd', 'row-even');
-    row.classList.add(i % 2 === 0 ? 'row-odd' : 'row-even');
+    if (!row.hidden) {
+      row.classList.add(visibleCount % 2 === 0 ? 'row-odd' : 'row-even');
+      visibleCount++;
+    }
     tbody.appendChild(row);
   });
 }
